@@ -35,3 +35,9 @@ node scripts/css-audit.cjs
 本地与 Cloudflare 的依赖分别由根目录和 `cloudflare/` 下的锁定文件管理；部署时生成的 `.cloudflare-deploy/` 不提交到仓库。当前未启用 Cloudflare 原生 Git 构建或其他分支的自动预览。
 
 正式实现位于 `app/`、`lib/`，产品与网络边界见 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+
+## 发布权限约束
+
+自动发布只在 `byKairo/kaipai` 的 `main` 分支运行。Actions 使用完整提交 SHA 固定，仓库只允许流程中列出的两个官方 Action；以后升级 Action 或添加新 Action 时，需要同步更新仓库 Settings → Actions 的允许列表。构建检出不保留 GitHub 登录凭据。
+
+主分支禁止强推和删除，正常提交推送仍可直接触发发布。仓库已开启 GitHub 密钥扫描和推送保护；不要绕过真实密钥告警。Cloudflare 部署令牌只引用 GitHub Actions Secret，模型 API Key 不应写入仓库或工作流。

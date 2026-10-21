@@ -37,3 +37,11 @@ node scripts/css-audit.cjs
 排版测试包含 12 套风格的内容、结构、转义与兼容检查，以及已确认的输出基线。输出基线只能在核对实际变化后显式更新。
 
 正式源码是根目录的 `app/` 和 `lib/`；旧副本、历史截图和压缩包位于 `archive/legacy/`。本轮修改前的源码备份位于 `archive/baselines/`，恢复时请先解压到独立目录核对，不要直接覆盖当前源码。
+
+## 源码许可与商业授权
+
+楷排源码公开，采用 [PolyForm Noncommercial License 1.0.0](LICENSE.md)，允许许可范围内的非商业使用、修改和再分发。它是源码可用许可，不属于允许自由商用的开源许可。
+
+**商业用途须事先取得著作权人的单独书面授权。**本仓库未提供商业授权；需要商业使用时，请通过 [GitHub Issues](https://github.com/byKairo/kaipai/issues) 联系 Kairo Solo，说明使用方式。
+
+许可包含非商业组织等用途的具体规定，以 LICENSE.md 原文为准。第三方依赖及其材料仍遵循各自的许可；本项目许可不改变其授权条件。

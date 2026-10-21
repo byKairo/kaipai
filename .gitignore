@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+tsconfig.tsbuildinfo
+.DS_Store
+
+.env
+.env.*
+!.env.example
+/dist/
+.vinext/
+.wrangler/
+.cloudflare-deploy/
+
+# Local archives, design trials, and generated validation output
+/archive/
+/output/
+/outputs/
+/work/
+/punk-assets/
+/docs/validation/
+/docs/verification/
+*.log

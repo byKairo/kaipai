@@ -1,0 +1,8 @@
+示例照片由内置 imagegen 生成；仅作排版演示，并非新闻现场照片。
+图片边框、倾斜和图注由 HTML 外层实现。
+
+reading-table.png
+Generate one original realistic editorial photograph, landscape 3:2, for demonstrating inserted images in a WeChat typesetting tool. A sunlit wooden cafe table beside a large window, an open unmarked book, a ceramic pale-gray coffee cup, soft leaf shadows. Quiet contemporary everyday life, natural slightly analog photography, warm neutral colors, soft grain, believable materials, generous photographic framing. No printed typography, no watermarks, no border, no instant-film frame: the framing will be added by real editable HTML.
+
+bookstore-street.png
+Generate one original realistic editorial photograph, landscape 3:2, for demonstrating inserted images in a WeChat typesetting tool. A calm ordinary Chinese city side street after light rain, a small independent bookstore storefront with large glass window and no readable lettering, a person seen from behind walking past under a modest umbrella. Architectural lines, soft overcast light, muted green-gray and terracotta palette, documentary photography with natural composition, no dramatic cinematic grading, no advertising, no visible real brand, no text, no watermark, no border. This is a generic fictional editorial illustration, not a photo of a reported event.

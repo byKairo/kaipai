@@ -1,0 +1,2572 @@
+/* Soft NEO UX overlay — 工业级新野兽派 (app chrome only)
+   Scope: Soft NEO only (.v091-neo2 / [data-ui="neo2"]). Reversible; import last.
+   Does NOT restyle WeChat article skins / export HTML. */
+
+/* ── Tokens — user exact RGB palette (comfortable industrial) ──────── */
+.v091-app[data-ui="neo2"],
+.v091-neo2,
+html[data-ui="neo2"],
+body[data-ui="neo2"] {
+  /* Exact user palette */  /* rgb(255, 220, 88) tape / highlights */
+  --neo-desk: #F7F0D3;           /* rgb(247,240,211) light desk bg */
+  --neo-ink: #1B1B1B;            /* rgb(27,27,27) borders + hard shadow */
+  --neo-accent: #D04060;         /* rgb(208,64,96) CTA / red accents */
+  --neo-purple: #A855F7;         /* rgb(168,85,247) */
+  --neo-blue: #37BDF9;           /* rgb(55,189,249) */
+  --neo-yellow-deep: #EBB956;    /* rgb(235,185,86) secondary warm */
+
+  /* Mapped chrome roles */
+  --neo-cream: var(--neo-desk);
+  --neo-paper: #FFFFFF;          /* floating option cards (hierarchy) */
+  --neo-edit: #F7F0D3;           /* global edit surfaces (Fig2) */
+  --neo-hover-shadow: 3px 3px 0 #D04060; /* Fig3 toolbar hover */
+  --neo-text: #1B1B1B;
+  --neo-muted: rgba(27, 27, 27, 0.55);
+  --neo-grid: rgba(27, 27, 27, 0.06);
+  --neo-shadow: 3px 3px 0 #1B1B1B;
+  --neo-shadow-lg: 4px 4px 0 #1B1B1B;
+  --neo-shadow-hover: 7px 7px 0 #1B1B1B;
+  --neo-shadow-sm: 2px 2px 0 #1B1B1B;
+  --neo-press: 1px 1px 0 #1B1B1B;
+  --neo-duration: 40ms;
+  --neo-ease: linear;
+  --neo-radius: 5px;
+
+  /* Soft accents (sparingly) — retinted to palette, not neon flood */
+  --neo-yellow: var(--neo-yellow-bright); /* tape badges */
+  --neo-gold: var(--neo-yellow-deep);
+  --neo-lime: #E8E9A8;           /* quiet warm companion, not neon */
+  --neo-pink: #F2C4D0;           /* soft wash of red */
+  --neo-mint: #D9EFE8;
+  --neo-lavender: #E8D7FA;       /* soft purple wash */
+  --neo-cyan: #C8EAF8;           /* soft blue wash */
+  --neo-peach: #F3E0B8;
+  --neo-sky: #C8EAF8;
+  --neo-coral: #E8A0B0;
+  --neo-rose: #E8A0B0;
+  --neo-selected: rgba(55, 189, 249, 0.14); /* calm blue tint */
+  --neo-online: #2F9E5B;
+  --neo-online-bright: #4ADE80;
+
+  /* Dark preview chrome only (region contrast — not phone interior) */
+  --neo-monitor: #141414;
+  --neo-monitor-panel: #1B1B1B;
+  --neo-monitor-card: #242424;
+  --neo-monitor-text: #F7F0D3;
+  --neo-monitor-accent: var(--neo-blue);
+  --neo-monitor-warn: var(--neo-yellow-bright);
+  --neo-monitor-border: 2.5px solid #1B1B1B;
+  --neo-monitor-shadow: 4px 4px 0 #1B1B1B;
+
+  /* Family lift shadows — retinted to user palette */
+  --neo-family-read: var(--neo-blue);           /* #37BDF9 */
+  --neo-family-voice: var(--neo-accent);       /* #D04060 */
+  --neo-family-brand: var(--neo-yellow-bright);/* #FFDC58 */
+  --neo-family-pulse: var(--neo-purple);       /* #A855F7 */
+}
+
+/* ── Motion keyframes (Brutstack) ─────────────────────────────────── */
+@keyframes neo-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes neo-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Shared press / lift helpers ──────────────────────────────────── */
+.v091-app[data-ui="neo2"] .v091-btn,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn,
+.v091-app[data-ui="neo2"] .v091-top-chip,
+.v091-app[data-ui="neo2"] .v091-top-help,
+.v091-neo2 .v091-btn,
+.v091-neo2 .v091-top-actions label.v091-btn,
+.v091-neo2 .v091-top-chip,
+.v091-neo2 .v091-top-help,
+body[data-ui="neo2"] .btn,
+body[data-ui="neo2"] .ctrl,
+body[data-ui="neo2"] .chip,
+body[data-ui="neo2"] .mini-action,
+body[data-ui="neo2"] .rail button,
+html[data-ui="neo2"] .btn,
+html[data-ui="neo2"] .chip,
+html[data-ui="neo2"] .mini-action,
+html[data-ui="neo2"] .rail button {
+  transition:
+    transform var(--neo-duration) var(--neo-ease),
+    box-shadow var(--neo-duration) var(--neo-ease),
+    background-color var(--neo-duration) var(--neo-ease),
+    border-color var(--neo-duration) var(--neo-ease);
+}
+
+/* Buttons — Brutstack hard press / lift */
+.v091-app[data-ui="neo2"] .v091-btn,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn,
+.v091-neo2 .v091-btn,
+.v091-neo2 .v091-top-actions label.v091-btn,
+body[data-ui="neo2"] .btn,
+html[data-ui="neo2"] .btn {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: var(--neo-radius) !important;
+  box-shadow: var(--neo-shadow) !important;
+  font-weight: 850;
+  color: var(--neo-ink);
+  background: var(--neo-cream);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-btn:hover,
+  .v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:hover,
+  .v091-neo2 .v091-btn:hover,
+  .v091-neo2 .v091-top-actions label.v091-btn:hover,
+  body[data-ui="neo2"] .btn:hover,
+  html[data-ui="neo2"] .btn:hover {
+    /* Fig3: red hard-shadow hover (instant, no soft ease) */
+    transform: none !important;
+    box-shadow: var(--neo-hover-shadow) !important;
+  }
+}
+
+.v091-app[data-ui="neo2"] .v091-btn:active,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:active,
+.v091-neo2 .v091-btn:active,
+.v091-neo2 .v091-top-actions label.v091-btn:active,
+body[data-ui="neo2"] .btn:active,
+html[data-ui="neo2"] .btn:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: var(--neo-press) !important;
+}
+
+/* Primary CTA — denser accent */
+.v091-app[data-ui="neo2"] .v091-btn.primary,
+.v091-neo2 .v091-btn.primary,
+body[data-ui="neo2"] .btn.primary,
+html[data-ui="neo2"] .btn.primary {
+  font-weight: 900 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-btn.ai,
+.v091-neo2 .v091-btn.ai {
+  background: var(--neo-yellow) !important;
+  color: var(--neo-ink) !important;
+  font-weight: 900 !important;
+}
+
+/* Top chips → neo badges */
+.v091-app[data-ui="neo2"] .v091-top-chip,
+.v091-app[data-ui="neo2"] .v091-top-help,
+.v091-neo2 .v091-top-chip,
+.v091-neo2 .v091-top-help {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: 999px !important;
+  background: var(--neo-cream) !important;
+  color: var(--neo-ink) !important;
+  box-shadow: 2px 2px 0 var(--neo-ink) !important;
+  font-weight: 800;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-top-chip:hover,
+  .v091-app[data-ui="neo2"] .v091-top-help:hover,
+  .v091-neo2 .v091-top-chip:hover,
+  .v091-neo2 .v091-top-help:hover {
+    transform: translate(2px, 2px);
+    box-shadow: var(--neo-press) !important;
+    background: var(--neo-yellow) !important;
+  }
+}
+
+.v091-app[data-ui="neo2"] .v091-top-chip:active,
+.v091-app[data-ui="neo2"] .v091-top-help:active,
+.v091-neo2 .v091-top-chip:active,
+.v091-neo2 .v091-top-help:active {
+  box-shadow: 0 0 0 var(--neo-ink) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-top-status,
+.v091-neo2 .v091-top-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 27px;
+  padding: 0 10px;
+  border: 2px solid var(--neo-ink);
+  border-radius: 999px;
+  background: var(--neo-ink);
+  box-shadow: 2px 2px 0 var(--neo-ink);
+  color: #F7F0D3;
+  font: 800 10px/1 ui-monospace, "Space Grotesk", monospace;
+  letter-spacing: 0.04em;
+}
+.v091-app[data-ui="neo2"] .v091-top-status::before,
+.v091-neo2 .v091-top-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--neo-online-bright);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.35);
+  flex: none;
+}
+
+/* Topbar separation (Neoflux) */
+.v091-app[data-ui="neo2"] .v091-topbar,
+.v091-neo2 .v091-topbar {
+  background: var(--neo-cream) !important;
+  box-shadow: 0 4px 0 var(--neo-ink) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-ui-switch,
+.v091-neo2 .v091-ui-switch {
+  border: 2px solid var(--neo-ink) !important;
+  box-shadow: var(--neo-shadow) !important;
+  border-radius: var(--neo-radius) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
+.v091-neo2 .v091-ui-switch button.active {
+  background: var(--neo-yellow) !important;
+  box-shadow: inset 0 -3px 0 var(--neo-ink);
+}
+
+/* Workspace pane entrance stagger */
+.v091-app[data-ui="neo2"] .v091-sidebar-host,
+.v091-app[data-ui="neo2"] .v091-sidebar,
+.v091-neo2 .v091-sidebar-host,
+.v091-neo2 .v091-sidebar,
+body[data-ui="neo2"] .sidebar {
+  animation: neo-rise 150ms var(--neo-ease) both;
+  animation-delay: 0ms;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor,
+body[data-ui="neo2"] .pane-editor {
+  animation: neo-rise 150ms var(--neo-ease) both;
+  animation-delay: 40ms;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview,
+.v091-neo2 .v091-preview,
+body[data-ui="neo2"] .pane-preview {
+  animation: neo-rise 150ms var(--neo-ease) both;
+  animation-delay: 80ms;
+}
+
+/* Pane / sidebar hard elevation — left white option cards, center white canvas */
+.v091-app[data-ui="neo2"] .v091-sidebar,
+.v091-app[data-ui="neo2"] .v091-sidebar-host,
+.v091-app[data-ui="neo2"] .v091-pane,
+.v091-neo2 .v091-sidebar,
+.v091-neo2 .v091-sidebar-host,
+.v091-neo2 .v091-pane,
+body[data-ui="neo2"] .sidebar,
+body[data-ui="neo2"] .pane {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: var(--neo-radius) !important;
+  background: var(--neo-paper) !important;
+  box-shadow: var(--neo-shadow-lg) !important;
+  color: var(--neo-text);
+}
+
+.v091-app[data-ui="neo2"] .v091-pane > header,
+.v091-neo2 .v091-pane > header {
+  border-bottom: 2px solid var(--neo-ink) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor > header,
+.v091-neo2 .v091-editor > header {
+  background: var(--neo-yellow) !important;
+  color: var(--neo-ink) !important;
+}
+
+/* Preview chrome header overridden in dark-monitor block below */
+
+/* Muted text contrast */
+.v091-app[data-ui="neo2"],
+.v091-neo2,
+body[data-ui="neo2"] {
+  --muted: var(--neo-muted);
+  color: var(--neo-ink);
+}
+
+.v091-app[data-ui="neo2"] .v091-pane header small,
+.v091-app[data-ui="neo2"] .v091-pane header span,
+.v091-neo2 .v091-pane header small,
+body[data-ui="neo2"] .side-desc,
+body[data-ui="neo2"] .component-note,
+body[data-ui="neo2"] .snippet span,
+body[data-ui="neo2"] .draft small {
+  color: var(--neo-muted) !important;
+}
+
+/* Inputs / selects — hard 2px + yellow/lime focus ring (no blur) */
+.v091-app[data-ui="neo2"] input:not([type="file"]):not([type="color"]):not([type="range"]),
+.v091-app[data-ui="neo2"] select,
+.v091-app[data-ui="neo2"] textarea,
+.v091-neo2 input:not([type="file"]):not([type="color"]):not([type="range"]),
+.v091-neo2 select,
+.v091-neo2 textarea,
+body[data-ui="neo2"] .side-main input:not([type="file"]):not([type="color"]):not([type="range"]),
+body[data-ui="neo2"] .side-main select,
+body[data-ui="neo2"] .side-main textarea,
+body[data-ui="neo2"] .ctrl,
+html[data-ui="neo2"] .side-main input:not([type="file"]):not([type="color"]):not([type="range"]),
+html[data-ui="neo2"] .side-main select,
+html[data-ui="neo2"] .side-main textarea,
+html[data-ui="neo2"] .ctrl {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.v091-app[data-ui="neo2"] input:not([type="file"]):not([type="color"]):not([type="range"]):focus,
+.v091-app[data-ui="neo2"] select:focus,
+.v091-app[data-ui="neo2"] textarea:focus,
+.v091-neo2 input:not([type="file"]):not([type="color"]):not([type="range"]):focus,
+.v091-neo2 select:focus,
+.v091-neo2 textarea:focus,
+body[data-ui="neo2"] .side-main input:focus,
+body[data-ui="neo2"] .side-main select:focus,
+body[data-ui="neo2"] .side-main textarea:focus,
+body[data-ui="neo2"] .ctrl:focus,
+html[data-ui="neo2"] .side-main input:focus,
+html[data-ui="neo2"] .side-main select:focus,
+html[data-ui="neo2"] .side-main textarea:focus,
+html[data-ui="neo2"] .ctrl:focus {
+  border-color: var(--neo-ink) !important;
+  box-shadow: 3px 3px 0 var(--neo-yellow) !important;
+}
+
+/* Rail tabs */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail {
+  background: var(--neo-lime) !important;
+  border-bottom: 2px solid var(--neo-ink) !important;
+}
+
+body[data-ui="neo2"] .rail button,
+html[data-ui="neo2"] .rail button {
+  border-right: 2px solid var(--neo-ink) !important;
+  font-weight: 800 !important;
+}
+
+body[data-ui="neo2"] .rail button:hover,
+html[data-ui="neo2"] .rail button:hover {
+  background: #fff !important;
+  transform: translateY(-1px);
+}
+
+body[data-ui="neo2"] .rail button:active,
+html[data-ui="neo2"] .rail button:active {
+  transform: translateY(2px);
+}
+
+body[data-ui="neo2"] .rail button.active,
+html[data-ui="neo2"] .rail button.active {
+  background: var(--neo-yellow) !important;
+  box-shadow: inset 0 -4px 0 var(--neo-ink) !important;
+}
+
+/* Side main — light option cards on desk */
+body[data-ui="neo2"] .side-main,
+html[data-ui="neo2"] .side-main {
+  background: var(--neo-paper) !important;
+}
+
+body[data-ui="neo2"] .sec h3,
+html[data-ui="neo2"] .sec h3 {
+  font-weight: 900 !important;
+  letter-spacing: 0.08em;
+}
+
+/* ── Block cards (Blocks catalog) ─────────────────────────────────── */
+/* Shared block recipe */
+body[data-ui="neo2"] .quick-style-card,
+body[data-ui="neo2"] .component-card,
+body[data-ui="neo2"] .component-row,
+body[data-ui="neo2"] .heading-style-card,
+body[data-ui="neo2"] .divider-grid > button,
+body[data-ui="neo2"] .follow-template-grid > button,
+body[data-ui="neo2"] #draftList .draft,
+body[data-ui="neo2"] #draftList .draft-row,
+body[data-ui="neo2"] .snippet,
+body[data-ui="neo2"] .card,
+html[data-ui="neo2"] .quick-style-card,
+html[data-ui="neo2"] .component-card,
+html[data-ui="neo2"] .component-row,
+html[data-ui="neo2"] .heading-style-card,
+html[data-ui="neo2"] .divider-grid > button,
+html[data-ui="neo2"] .follow-template-grid > button,
+html[data-ui="neo2"] #draftList .draft,
+html[data-ui="neo2"] #draftList .draft-row,
+html[data-ui="neo2"] .snippet,
+html[data-ui="neo2"] .card,
+.v091-app[data-ui="neo2"] .v091-style-grid > button,
+.v091-app[data-ui="neo2"] .v091-quick-style-list > button,
+.v091-app[data-ui="neo2"] .v091-component-grid > button,
+.v091-neo2 .v091-style-grid > button,
+.v091-neo2 .v091-quick-style-list > button,
+.v091-neo2 .v091-component-grid > button {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: var(--neo-radius) !important;
+  background: #fff !important;
+  box-shadow: var(--neo-shadow) !important;
+  transition:
+    transform var(--neo-duration) var(--neo-ease),
+    box-shadow var(--neo-duration) var(--neo-ease),
+    background-color var(--neo-duration) var(--neo-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-ui="neo2"] .quick-style-card:hover,
+  body[data-ui="neo2"] .component-card:hover,
+  body[data-ui="neo2"] .component-row:hover,
+  body[data-ui="neo2"] .heading-style-card:hover,
+  body[data-ui="neo2"] .divider-grid > button:hover,
+  body[data-ui="neo2"] .follow-template-grid > button:hover,
+  body[data-ui="neo2"] #draftList .draft:hover,
+  body[data-ui="neo2"] #draftList .draft-row:hover,
+  body[data-ui="neo2"] .snippet:hover,
+  body[data-ui="neo2"] .card:hover,
+  html[data-ui="neo2"] .quick-style-card:hover,
+  html[data-ui="neo2"] .component-card:hover,
+  html[data-ui="neo2"] .heading-style-card:hover,
+  html[data-ui="neo2"] .divider-grid > button:hover,
+  html[data-ui="neo2"] .follow-template-grid > button:hover,
+  html[data-ui="neo2"] #draftList .draft:hover,
+  html[data-ui="neo2"] #draftList .draft-row:hover,
+  .v091-app[data-ui="neo2"] .v091-style-grid > button:hover,
+  .v091-app[data-ui="neo2"] .v091-quick-style-list > button:hover,
+  .v091-app[data-ui="neo2"] .v091-component-grid > button:hover,
+  .v091-neo2 .v091-style-grid > button:hover,
+  .v091-neo2 .v091-quick-style-list > button:hover,
+  .v091-neo2 .v091-component-grid > button:hover {
+    transform: translate(-2px, -2px) !important;
+    box-shadow: var(--neo-shadow-hover) !important;
+  }
+}
+
+body[data-ui="neo2"] .quick-style-card:active,
+body[data-ui="neo2"] .component-card:active,
+body[data-ui="neo2"] .heading-style-card:active,
+body[data-ui="neo2"] .divider-grid > button:active,
+body[data-ui="neo2"] .follow-template-grid > button:active,
+body[data-ui="neo2"] #draftList .draft:active,
+body[data-ui="neo2"] #draftList .draft-row:active,
+html[data-ui="neo2"] .quick-style-card:active,
+html[data-ui="neo2"] .component-card:active,
+html[data-ui="neo2"] .divider-grid > button:active,
+html[data-ui="neo2"] .follow-template-grid > button:active,
+.v091-app[data-ui="neo2"] .v091-style-grid > button:active,
+.v091-app[data-ui="neo2"] .v091-component-grid > button:active,
+.v091-neo2 .v091-style-grid > button:active,
+.v091-neo2 .v091-component-grid > button:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: var(--neo-press) !important;
+}
+
+/* Active: lime/yellow fill + inset bottom bar (no soft glow) */
+body[data-ui="neo2"] .quick-style-card.active,
+body[data-ui="neo2"] .heading-style-card.active,
+body[data-ui="neo2"] .follow-template-grid > button.active,
+body[data-ui="neo2"] #draftList .draft.active,
+html[data-ui="neo2"] .quick-style-card.active,
+html[data-ui="neo2"] .heading-style-card.active,
+html[data-ui="neo2"] .follow-template-grid > button.active,
+html[data-ui="neo2"] #draftList .draft.active,
+.v091-app[data-ui="neo2"] .v091-style-grid > button.active,
+.v091-app[data-ui="neo2"] .v091-quick-style-list > button.active,
+.v091-neo2 .v091-style-grid > button.active,
+.v091-neo2 .v091-quick-style-list > button.active {
+  background: var(--neo-selected) !important;
+  box-shadow: var(--neo-shadow-lg) !important;
+  outline: none !important;
+}
+
+body[data-ui="neo2"] .quick-style-card.active::after,
+body[data-ui="neo2"] .heading-style-card.active::after,
+body[data-ui="neo2"] .follow-template-grid > button.active::after,
+html[data-ui="neo2"] .quick-style-card.active::after,
+html[data-ui="neo2"] .heading-style-card.active::after,
+html[data-ui="neo2"] .follow-template-grid > button.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--neo-ink);
+  border-radius: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Keep existing ✓ check on quick style; place above bottom bar */
+body[data-ui="neo2"] #quickStyleList .quick-style-card.active::after,
+html[data-ui="neo2"] #quickStyleList .quick-style-card.active::after {
+  content: "✓";
+  left: auto;
+  right: 4px;
+  top: 4px;
+  bottom: auto;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--neo-accent);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--neo-ink);
+  z-index: 4;
+}
+
+body[data-ui="neo2"] #quickStyleList .quick-style-card.active,
+html[data-ui="neo2"] #quickStyleList .quick-style-card.active {
+  /* Selected uses family hard-shadow when set; else black lg + inset bar */
+  box-shadow: var(--neo-family-lift-shadow, var(--neo-shadow-lg)), inset 0 -4px 0 var(--neo-ink) !important;
+}
+
+/* Colored header strip / monospace eyebrow for block families */
+body[data-ui="neo2"] .component-card,
+body[data-ui="neo2"] .component-row,
+html[data-ui="neo2"] .component-card,
+html[data-ui="neo2"] .component-row {
+  padding-top: 28px !important;
+}
+
+body[data-ui="neo2"] .component-card::before,
+body[data-ui="neo2"] .component-row::before,
+html[data-ui="neo2"] .component-card::before,
+html[data-ui="neo2"] .component-row::before {
+  content: "BLOCK";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--neo-lavender);
+  border-bottom: 2px solid var(--neo-ink);
+  font: 800 8px/1 ui-monospace, "JetBrains Mono", "Space Grotesk", monospace;
+  letter-spacing: 0.14em;
+  color: var(--neo-ink);
+  z-index: 1;
+}
+
+body[data-ui="neo2"] .component-card:nth-of-type(3n+1)::before,
+html[data-ui="neo2"] .component-card:nth-of-type(3n+1)::before { background: var(--neo-lime); }
+body[data-ui="neo2"] .component-card:nth-of-type(3n+2)::before,
+html[data-ui="neo2"] .component-card:nth-of-type(3n+2)::before { background: var(--neo-pink); }
+body[data-ui="neo2"] .component-card:nth-of-type(3n)::before,
+html[data-ui="neo2"] .component-card:nth-of-type(3n)::before { background: var(--neo-mint); }
+
+/* Style tiles — hard black frame + black rest shadow; family colors the LIFT hard-shadow (not left border / not rail) */
+body[data-ui="neo2"] .quick-style-card[data-neo-block="style"],
+body[data-ui="neo2"] #quickStyleList .quick-style-card,
+html[data-ui="neo2"] .quick-style-card[data-neo-block="style"],
+html[data-ui="neo2"] #quickStyleList .quick-style-card {
+  padding-left: 8px !important;
+  border: 2px solid var(--neo-ink) !important; /* stay black — do not recolor border */
+  box-shadow: var(--neo-shadow) !important; /* rest: black hard shadow */
+  transition:
+    transform var(--neo-duration) var(--neo-ease),
+    box-shadow var(--neo-duration) var(--neo-ease),
+    background-color var(--neo-duration) var(--neo-ease);
+}
+
+/* Kill leftover ::before color rail (wrong approach from earlier passes) */
+body[data-ui="neo2"] #quickStyleList .quick-style-card::before,
+html[data-ui="neo2"] #quickStyleList .quick-style-card::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Per-family lift shadow color (same offset as --neo-shadow-hover: 7px 7px 0) */
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="read"],
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="read"] {
+  --neo-family-lift-shadow: 7px 7px 0 var(--neo-family-read);
+}
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="voice"],
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="voice"] {
+  --neo-family-lift-shadow: 7px 7px 0 var(--neo-family-voice);
+}
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="brand"],
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="brand"] {
+  --neo-family-lift-shadow: 7px 7px 0 var(--neo-family-brand);
+}
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="pulse"],
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="pulse"] {
+  --neo-family-lift-shadow: 7px 7px 0 var(--neo-family-pulse);
+}
+
+/* Hover / focus / selected: keep lift motion; swap revealed hard-shadow ink → family color */
+@media (hover: hover) and (pointer: fine) {
+  body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family]:hover,
+  html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family]:hover {
+    box-shadow: var(--neo-family-lift-shadow) !important;
+  }
+}
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family]:focus-visible,
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family].active,
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family]:focus-visible,
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family].active {
+  box-shadow: var(--neo-family-lift-shadow) !important;
+}
+
+/* Don't crush Soft NEO style thumbs */
+body[data-ui="neo2"] .v080-style-thumb,
+body[data-ui="neo2"] .rich-style-preview,
+body[data-ui="neo2"] .quick-style-card .v080-style-thumb,
+html[data-ui="neo2"] .v080-style-thumb,
+.v091-app[data-ui="neo2"] .v091-style-thumb,
+.v091-neo2 .v091-style-thumb {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Divider / follow studio tiles — unify to block language */
+body[data-ui="neo2"] .divider-grid > button,
+body[data-ui="neo2"] .follow-template-grid > button,
+html[data-ui="neo2"] .divider-grid > button,
+html[data-ui="neo2"] .follow-template-grid > button {
+  padding-top: 26px !important;
+}
+
+body[data-ui="neo2"] .divider-grid > button::before,
+html[data-ui="neo2"] .divider-grid > button::before {
+  content: "DIV";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--neo-mint);
+  border-bottom: 2px solid var(--neo-ink);
+  font: 800 7px/1 ui-monospace, "JetBrains Mono", monospace;
+  letter-spacing: 0.12em;
+  color: var(--neo-ink);
+}
+
+body[data-ui="neo2"] .follow-template-grid > button::before,
+html[data-ui="neo2"] .follow-template-grid > button::before {
+  content: "FOLLOW";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--neo-pink);
+  border-bottom: 2px solid var(--neo-ink);
+  font: 800 7px/1 ui-monospace, "JetBrains Mono", monospace;
+  letter-spacing: 0.1em;
+  color: var(--neo-ink);
+}
+
+body[data-ui="neo2"] .divider-grid > button:nth-child(odd)::before,
+html[data-ui="neo2"] .divider-grid > button:nth-child(odd)::before { background: var(--neo-lavender); }
+body[data-ui="neo2"] .follow-template-grid > button:nth-child(even)::before,
+html[data-ui="neo2"] .follow-template-grid > button:nth-child(even)::before { background: var(--neo-gold); }
+
+body[data-ui="neo2"] .heading-style-card,
+html[data-ui="neo2"] .heading-style-card {
+  padding: 28px 10px 10px !important;
+}
+
+body[data-ui="neo2"] .heading-style-card::before,
+html[data-ui="neo2"] .heading-style-card::before {
+  content: "HEAD";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--neo-yellow);
+  border-bottom: 2px solid var(--neo-ink);
+  font: 800 7px/1 ui-monospace, "JetBrains Mono", monospace;
+  letter-spacing: 0.12em;
+  color: var(--neo-ink);
+}
+
+/* Chapter HEAD pastels by data-id — no uniform cyan */
+body[data-ui="neo2"] .heading-style-card[data-id="bar"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="bar"]::before { background: var(--neo-yellow); }
+body[data-ui="neo2"] .heading-style-card[data-id="frame"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="frame"]::before { background: var(--neo-pink); }
+body[data-ui="neo2"] .heading-style-card[data-id="twin"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="twin"]::before { background: var(--neo-mint); }
+body[data-ui="neo2"] .heading-style-card[data-id="markerHalf"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="markerHalf"]::before { background: var(--neo-lavender); }
+body[data-ui="neo2"] .heading-style-card[data-id="markerUnder"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="markerUnder"]::before { background: var(--neo-gold); }
+body[data-ui="neo2"] .heading-style-card[data-id="eyebrow"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="eyebrow"]::before { background: var(--neo-peach); }
+body[data-ui="neo2"] .heading-style-card[data-id="iconTag"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="iconTag"]::before { background: var(--neo-lime); }
+body[data-ui="neo2"] .heading-style-card[data-id="avatarLeft"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="avatarLeft"]::before { background: #b8d4f5; }
+body[data-ui="neo2"] .heading-style-card[data-id="avatarTop"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="avatarTop"]::before { background: #f5c6de; }
+body[data-ui="neo2"] .heading-style-card[data-id="poster"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="poster"]::before { background: #cde8c4; }
+body[data-ui="neo2"] .heading-style-card[data-id="brand"]::before,
+html[data-ui="neo2"] .heading-style-card[data-id="brand"]::before { background: #f0d4a8; }
+
+/* Draft block cards */
+body[data-ui="neo2"] #draftList .draft,
+body[data-ui="neo2"] #draftList .draft-row,
+html[data-ui="neo2"] #draftList .draft,
+html[data-ui="neo2"] #draftList .draft-row {
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  background: #fffdf8 !important;
+  border-radius: var(--neo-radius) !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+body[data-ui="neo2"] #draftList .draft::before,
+body[data-ui="neo2"] #draftList .draft-row::before,
+html[data-ui="neo2"] #draftList .draft::before,
+html[data-ui="neo2"] #draftList .draft-row::before {
+  content: "DRAFT";
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  background: var(--neo-gold);
+  border-right: 2px solid var(--neo-ink);
+  font: 800 8px/1 ui-monospace, "JetBrains Mono", monospace;
+  letter-spacing: 0.14em;
+  color: var(--neo-ink);
+}
+
+body[data-ui="neo2"] #draftList .draft-main,
+body[data-ui="neo2"] #draftList .draft-open,
+html[data-ui="neo2"] #draftList .draft-main,
+html[data-ui="neo2"] #draftList .draft-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 12px 11px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--neo-ink);
+  text-align: left;
+  cursor: pointer;
+  transform: none !important;
+}
+
+body[data-ui="neo2"] #draftList .draft-main:hover,
+body[data-ui="neo2"] #draftList .draft-open:hover,
+html[data-ui="neo2"] #draftList .draft-main:hover,
+html[data-ui="neo2"] #draftList .draft-open:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+body[data-ui="neo2"] #draftList .draft-main b,
+body[data-ui="neo2"] #draftList .draft-open b,
+html[data-ui="neo2"] #draftList .draft-main b,
+html[data-ui="neo2"] #draftList .draft-open b {
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+body[data-ui="neo2"] #draftList .draft-main small,
+body[data-ui="neo2"] #draftList .draft-open small,
+html[data-ui="neo2"] #draftList .draft-main small,
+html[data-ui="neo2"] #draftList .draft-open small {
+  color: var(--neo-muted) !important;
+  font-size: 10px;
+}
+
+body[data-ui="neo2"] #draftList .draft-del,
+body[data-ui="neo2"] #draftList .draft-delete,
+html[data-ui="neo2"] #draftList .draft-del,
+html[data-ui="neo2"] #draftList .draft-delete {
+  flex: none;
+  width: 46px;
+  border: 0 !important;
+  border-left: 2px solid var(--neo-ink) !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: #8a2f2f !important;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transform: none !important;
+}
+
+body[data-ui="neo2"] #draftList .draft-del:hover,
+body[data-ui="neo2"] #draftList .draft-delete:hover,
+html[data-ui="neo2"] #draftList .draft-del:hover,
+html[data-ui="neo2"] #draftList .draft-delete:hover {
+  background: #ffe4e0 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Snippet / card pastel hierarchy (Neoflux) */
+body[data-ui="neo2"] .snippet:nth-of-type(3n+1),
+html[data-ui="neo2"] .snippet:nth-of-type(3n+1) { background: #fff8c9 !important; }
+body[data-ui="neo2"] .snippet:nth-of-type(3n+2),
+html[data-ui="neo2"] .snippet:nth-of-type(3n+2) { background: #f0e9ff !important; }
+body[data-ui="neo2"] .snippet:nth-of-type(3n),
+html[data-ui="neo2"] .snippet:nth-of-type(3n) { background: #e8fff5 !important; }
+
+body[data-ui="neo2"] .mini-action,
+html[data-ui="neo2"] .mini-action {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  box-shadow: 2px 2px 0 var(--neo-ink) !important;
+  font-weight: 800;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-ui="neo2"] .mini-action:hover,
+  html[data-ui="neo2"] .mini-action:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--neo-shadow-sm) !important;
+    background: var(--neo-lime) !important;
+  }
+}
+
+body[data-ui="neo2"] .mini-action:active,
+html[data-ui="neo2"] .mini-action:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--neo-ink) !important;
+}
+
+body[data-ui="neo2"] .chip,
+html[data-ui="neo2"] .chip {
+  border: 2px solid var(--neo-ink) !important;
+  box-shadow: 2px 2px 0 var(--neo-ink) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-ui="neo2"] .chip:hover,
+  html[data-ui="neo2"] .chip:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--neo-shadow-sm) !important;
+    background: var(--neo-mint) !important;
+  }
+}
+
+body[data-ui="neo2"] .chip.active,
+html[data-ui="neo2"] .chip.active {
+  background: var(--neo-lavender) !important;
+}
+
+/* Toast + modal */
+.v091-app[data-ui="neo2"] .v091-toast,
+.v091-neo2 .v091-toast {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: var(--neo-radius) !important;
+  background: var(--neo-yellow) !important;
+  box-shadow: var(--neo-shadow-lg) !important;
+  font-weight: 850;
+  animation: neo-toast-in 150ms var(--neo-ease) both;
+}
+
+.v091-app[data-ui="neo2"] .v091-local-api-modal,
+.v091-app[data-ui="neo2"] .v091-help-modal,
+.v091-neo2 .v091-local-api-modal,
+.v091-neo2 .v091-help-modal {
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: var(--neo-radius) !important;
+  background: var(--neo-cream) !important;
+  box-shadow: var(--neo-shadow-lg) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-modal-backdrop,
+.v091-neo2 .v091-modal-backdrop {
+  background: rgba(21, 21, 21, 0.42) !important;
+}
+
+/* Preview chrome — dark industrial monitor around phone.
+   CRITICAL: do NOT restyle .v091-wechat-article / export skins;
+   phone interior keeps WeChat paper colors from style system. */
+.v091-app[data-ui="neo2"] .v091-preview,
+.v091-neo2 .v091-preview {
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+  background: var(--neo-monitor) !important;
+  border: var(--neo-monitor-border) !important;
+  box-shadow: var(--neo-monitor-shadow) !important;
+  color: var(--neo-monitor-text) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header,
+.v091-neo2 .v091-preview > header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: var(--neo-monitor-panel) !important;
+  border-bottom: 1px solid rgba(240, 246, 252, 0.12) !important;
+  color: var(--neo-monitor-text) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header b,
+.v091-neo2 .v091-preview > header b {
+  color: var(--neo-monitor-text) !important;
+  font: 800 11px/1.2 ui-monospace, "JetBrains Mono", "Space Grotesk", monospace !important;
+  letter-spacing: 0.04em;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-dir,
+.v091-neo2 .v091-preview > header .v091-preview-dir {
+  color: var(--neo-monitor-accent);
+  margin-right: 4px;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-traffic,
+.v091-neo2 .v091-preview > header .v091-preview-traffic {
+  display: inline-flex;
+  gap: 5px;
+  margin-right: 2px;
+}
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-traffic i,
+.v091-neo2 .v091-preview > header .v091-preview-traffic i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+  border: 1px solid rgba(0,0,0,0.35);
+}
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-traffic i:nth-child(1),
+.v091-neo2 .v091-preview > header .v091-preview-traffic i:nth-child(1) { background: #FF5F57; }
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-traffic i:nth-child(2),
+.v091-neo2 .v091-preview > header .v091-preview-traffic i:nth-child(2) { background: #FEBC2E; }
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-traffic i:nth-child(3),
+.v091-neo2 .v091-preview > header .v091-preview-traffic i:nth-child(3) { background: #28C840; }
+
+.v091-app[data-ui="neo2"] .v091-preview > header button,
+.v091-neo2 .v091-preview > header button {
+  margin-left: auto;
+  border: 1.5px solid rgba(240, 246, 252, 0.28) !important;
+  border-radius: 4px !important;
+  background: var(--neo-monitor-card) !important;
+  color: var(--neo-monitor-text) !important;
+  box-shadow: none !important;
+  font: 700 10px/1 ui-monospace, monospace !important;
+  height: 24px;
+  padding: 0 8px;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview-bg,
+.v091-neo2 .v091-preview-bg {
+  overflow-x: clip !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none;
+  padding: 16px 14px 16px !important;
+  box-sizing: border-box;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview-bg::before,
+.v091-neo2 .v091-preview-bg::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Phone frame sits on dark monitor; INTERIOR article skins untouched */
+.v091-app[data-ui="neo2"] .v091-wechat-phone,
+.v091-neo2 .v091-wechat-phone {
+  border: 2px solid var(--neo-ink);
+  border-radius: var(--neo-radius);
+  box-shadow: 3px 3px 0 var(--neo-ink);
+  max-width: 100%;
+  width: min(100%, 365px);
+  min-height: 0 !important;
+  height: fit-content;
+  align-self: flex-start;
+  padding-bottom: 0 !important;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  /* do not force background/color — leave to style paper / WeChat skins */
+}
+
+.v091-app[data-ui="neo2"] .v091-phone-top,
+.v091-neo2 .v091-phone-top {
+  border-bottom: 2px solid var(--neo-ink);
+  font-weight: 800;
+}
+
+/* Explicit: never darken article interior via Soft NEO chrome */
+.v091-app[data-ui="neo2"] .v091-wechat-article,
+.v091-app[data-ui="neo2"] .v091-wechat-phone .v091-wechat-article,
+.v091-neo2 .v091-wechat-article {
+  /* no color/background overrides here — WeChat paper skins win */
+}
+
+/* Legacy sidebar preview path (if present) — same Soft NEO constraints */
+body[data-ui="neo2"] .pane-preview,
+html[data-ui="neo2"] .pane-preview {
+  overflow-x: hidden !important;
+  min-width: 0 !important;
+}
+
+body[data-ui="neo2"] .preview-wrap,
+html[data-ui="neo2"] .preview-wrap {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none;
+  padding: 16px 14px 16px !important;
+  box-sizing: border-box;
+}
+
+body[data-ui="neo2"] .preview-wrap::before,
+html[data-ui="neo2"] .preview-wrap::before {
+  content: none !important;
+  display: none !important;
+}
+
+body[data-ui="neo2"] .phone,
+body[data-ui="neo2"] .phone.desktop,
+html[data-ui="neo2"] .phone {
+  min-height: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+body[data-ui="neo2"] .phone:hover,
+html[data-ui="neo2"] .phone:hover {
+  transform: none !important; /* hover translate/rotate caused horizontal shake */
+}
+
+/* Footer badge density */
+.v091-app[data-ui="neo2"] > footer,
+.v091-neo2 > footer {
+  border-top: 2px solid var(--neo-ink) !important;
+  background: var(--neo-yellow) !important;
+  font-weight: 800;
+}
+
+/* Gallery style cards if present */
+body[data-ui="neo2"] .gallery-style-card,
+body[data-ui="neo2"] .style-gallery-card,
+html[data-ui="neo2"] .gallery-style-card {
+  border: 2px solid var(--neo-ink) !important;
+  box-shadow: var(--neo-shadow-lg) !important;
+  border-radius: var(--neo-radius) !important;
+}
+
+/* ── Density pass (Neoflux breathing room) ─────────────────────────── */
+body[data-ui="neo2"] #quickStyleList.quick-style-list,
+html[data-ui="neo2"] #quickStyleList.quick-style-list {
+  gap: 11px !important;
+  padding: 2px 0 4px !important;
+}
+
+body[data-ui="neo2"] #quickStyleList .quick-style-card,
+html[data-ui="neo2"] #quickStyleList .quick-style-card {
+  height: auto !important;
+  min-height: 118px !important;
+  padding: 8px 8px 10px 10px !important;
+  overflow: visible !important;
+  background: #FFFFFF !important;
+  box-shadow: var(--neo-shadow) !important;
+}
+
+body[data-ui="neo2"] #quickStyleList .quick-style-card > span:last-child,
+html[data-ui="neo2"] #quickStyleList .quick-style-card > span:last-child {
+  margin: 7px 2px 2px !important;
+  overflow: visible !important;
+  min-height: 1.3em;
+}
+
+body[data-ui="neo2"] #quickStyleList .quick-style-card b,
+html[data-ui="neo2"] #quickStyleList .quick-style-card b {
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.01em;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word;
+  text-align: left !important;
+}
+
+
+body[data-ui="neo2"] #quickStyleList .v080-style-thumb,
+body[data-ui="neo2"] .quick-style-card .v080-style-thumb,
+html[data-ui="neo2"] #quickStyleList .v080-style-thumb {
+  height: 58px !important;
+  padding: 7px !important;
+  border: 1px solid rgba(21, 21, 21, 0.14) !important;
+  box-shadow: none !important; /* one hard frame on card, not nested soup */
+}
+
+/* Override sidebar transform:none so Soft NEO lift is visible */
+@media (hover: hover) and (pointer: fine) {
+  body[data-ui="neo2"] #quickStyleList .quick-style-card:hover,
+  html[data-ui="neo2"] #quickStyleList .quick-style-card:hover {
+    transform: translate(-2px, -2px) !important;
+    /* Prefer family lift shadow when --neo-family-lift-shadow is set on [data-family] */
+    box-shadow: var(--neo-family-lift-shadow, var(--neo-shadow-hover)) !important;
+  }
+}
+
+body[data-ui="neo2"] #quickStyleList .quick-style-card:active,
+html[data-ui="neo2"] #quickStyleList .quick-style-card:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: var(--neo-press) !important;
+}
+
+/* Secondary controls: 1px border or small shadow only */
+body[data-ui="neo2"] .highlight-swatches button,
+body[data-ui="neo2"] .accent-swatches button,
+html[data-ui="neo2"] .highlight-swatches button {
+  border-width: 1px !important;
+  box-shadow: none !important;
+}
+
+body[data-ui="neo2"] .heading-style-card b,
+html[data-ui="neo2"] .heading-style-card b {
+  font-size: 11px !important;
+}
+
+body[data-ui="neo2"] .heading-style-card small,
+html[data-ui="neo2"] .heading-style-card small {
+  font-size: 9px !important;
+  white-space: normal !important;
+}
+
+body[data-ui="neo2"] .heading-style-grid,
+html[data-ui="neo2"] .heading-style-grid {
+  gap: 10px !important;
+}
+
+/* Don't add extra frames around editor / preview article */
+body[data-ui="neo2"] .pane-editor .editor-surface,
+body[data-ui="neo2"] #editor,
+html[data-ui="neo2"] #editor {
+  box-shadow: none !important;
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .v091-app[data-ui="neo2"] *,
+  .v091-neo2 *,
+  body[data-ui="neo2"] *,
+  html[data-ui="neo2"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .v091-app[data-ui="neo2"] .v091-btn:hover,
+  .v091-app[data-ui="neo2"] .v091-btn:active,
+  .v091-app[data-ui="neo2"] .v091-top-chip:hover,
+  .v091-app[data-ui="neo2"] .v091-top-chip:active,
+  .v091-neo2 .v091-btn:hover,
+  .v091-neo2 .v091-btn:active,
+  body[data-ui="neo2"] .btn:hover,
+  body[data-ui="neo2"] .btn:active,
+  body[data-ui="neo2"] .quick-style-card:hover,
+  body[data-ui="neo2"] .quick-style-card:active,
+  body[data-ui="neo2"] .component-card:hover,
+  body[data-ui="neo2"] .component-card:active,
+  body[data-ui="neo2"] .divider-grid > button:hover,
+  body[data-ui="neo2"] .follow-template-grid > button:hover,
+  body[data-ui="neo2"] #draftList .draft:hover,
+  html[data-ui="neo2"] .btn:hover,
+  html[data-ui="neo2"] .quick-style-card:hover,
+  html[data-ui="neo2"] .component-card:hover {
+    transform: none !important;
+  }
+}
+
+
+/* ── Industrial desk shell + tape badges + toolbar ─────────────────── */
+.v091-app[data-ui="neo2"],
+.v091-neo2 {
+  color: var(--neo-text);
+  background-color: var(--neo-cream) !important;
+  background-image:
+    linear-gradient(var(--neo-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--neo-grid) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-topbar,
+.v091-neo2 .v091-topbar {
+  background: var(--neo-paper) !important;
+  border-bottom: 2px solid var(--neo-ink) !important;
+  box-shadow: 0 3px 0 var(--neo-ink) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-workspace,
+.v091-neo2 .v091-workspace {
+  background: transparent !important;
+}
+
+/* Fluorescent tape badges for section titles */
+body[data-ui="neo2"] .section-kicker,
+html[data-ui="neo2"] .section-kicker,
+body[data-ui="neo2"] [data-neo-tape],
+html[data-ui="neo2"] [data-neo-tape] {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 8px !important;
+  padding: 3px 8px 2px !important;
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: 3px !important;
+  background: var(--neo-yellow) !important;
+  box-shadow: 2px 2px 0 var(--neo-ink) !important;
+  color: var(--neo-ink) !important;
+  font: 800 9px/1.2 ui-monospace, "JetBrains Mono", "Space Grotesk", monospace !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+  transform: rotate(-0.6deg);
+}
+
+body[data-ui="neo2"] .section-kicker::before,
+html[data-ui="neo2"] .section-kicker::before,
+body[data-ui="neo2"] [data-neo-tape]::before,
+html[data-ui="neo2"] [data-neo-tape]::before {
+  content: "01";
+  display: inline-block;
+  padding: 1px 4px;
+  margin-right: 2px;
+  border: 1.5px solid var(--neo-ink);
+  border-radius: 2px;
+  background: #fff;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+body[data-ui="neo2"] #tab-layout .section-kicker::before,
+html[data-ui="neo2"] #tab-layout .section-kicker::before { content: "01"; }
+body[data-ui="neo2"] #tab-styles .section-kicker::before,
+html[data-ui="neo2"] #tab-styles .section-kicker::before { content: "02"; }
+body[data-ui="neo2"] #tab-drafts .section-kicker::before,
+html[data-ui="neo2"] #tab-drafts .section-kicker::before { content: "03"; }
+body[data-ui="neo2"] #tab-ai .section-kicker::before,
+html[data-ui="neo2"] #tab-ai .section-kicker::before { content: "AI"; }
+
+body[data-ui="neo2"] .sec > h3:not(.big-side-title),
+html[data-ui="neo2"] .sec > h3:not(.big-side-title) {
+  display: inline-block;
+  margin: 4px 0 10px !important;
+  padding: 2px 7px !important;
+  border: 2px solid var(--neo-ink);
+  border-radius: 3px;
+  background: var(--neo-yellow);
+  box-shadow: 2px 2px 0 var(--neo-ink);
+  font: 850 11px/1.25 ui-monospace, "Space Grotesk", "Noto Sans SC", sans-serif !important;
+  letter-spacing: 0.04em;
+  transform: rotate(-0.4deg);
+}
+
+body[data-ui="neo2"] .big-side-title,
+html[data-ui="neo2"] .big-side-title {
+  color: var(--neo-text) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Left option cards already white via shared block recipe */
+
+/* Center editor — pure white input canvas */
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor {
+  background: #FFFFFF !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-neo2 .v091-editor-scroll,
+.v091-neo2 .v091-rich-editor-shell {
+  background: #FFFFFF !important;
+}
+
+/* Toolbar — narrow black icon buttons */
+.v091-app[data-ui="neo2"] .v091-toolbar,
+.v091-neo2 .v091-toolbar {
+  padding: 6px 7px !important;
+  border-bottom: 2px solid var(--neo-ink) !important;
+  background: #FFFCF3 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar button,
+.v091-neo2 .v091-toolbar button {
+  min-width: 28px;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 7px !important;
+  border: 2px solid var(--neo-ink) !important;
+  border-radius: 4px !important;
+  background: var(--neo-ink) !important;
+  color: #F7F0D3 !important;
+  box-shadow: 2px 2px 0 var(--neo-ink) !important;
+  font: 800 10px/1 ui-monospace, "Space Grotesk", sans-serif !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar button:active,
+.v091-neo2 .v091-toolbar button:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: var(--neo-press) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar button:disabled,
+.v091-neo2 .v091-toolbar button:disabled {
+  opacity: 0.4;
+  transform: none !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar > i,
+.v091-neo2 .v091-toolbar > i {
+  background: rgba(27, 27, 27, 0.22);
+  margin: 2px 2px;
+}
+
+/* Online / local chips — green LED feel when they start with ● */
+.v091-app[data-ui="neo2"] .v091-top-chip,
+.v091-neo2 .v091-top-chip {
+  background: var(--neo-ink) !important;
+  border-color: var(--neo-ink) !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-btn.primary,
+.v091-neo2 .v091-btn.primary,
+body[data-ui="neo2"] .btn.primary,
+html[data-ui="neo2"] .btn.primary {
+  background: var(--neo-accent) !important;
+  color: #fff !important;
+}
+
+/* Soften top-chip hover to mechanical active (no soft yellow wash) */
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-top-chip:hover,
+  .v091-app[data-ui="neo2"] .v091-top-help:hover,
+  .v091-neo2 .v091-top-chip:hover,
+  .v091-neo2 .v091-top-help:hover {
+    transform: none;
+    box-shadow: 2px 2px 0 var(--neo-ink) !important;
+    background: #2A2A2A !important;
+    color: #fff !important;
+  }
+}
+.v091-app[data-ui="neo2"] .v091-top-chip:active,
+.v091-app[data-ui="neo2"] .v091-top-help:active,
+.v091-neo2 .v091-top-chip:active,
+.v091-neo2 .v091-top-help:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--neo-press) !important;
+}
+
+/* Rail stays dense fluorescent strip */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail {
+  background: var(--neo-yellow) !important;
+}
+
+/* Kill prototype pastel splash behind Soft NEO only (desk grid wins) */
+.v091-app[data-ui="neo2"]::after,
+.v091-neo2::after {
+  display: none !important;
+}
+
+
+/* Kill prototype "02 / PROOF" prefix — Soft NEO uses DIR traffic-light chrome */
+.v091-app[data-ui="neo2"] .v091-preview > header > b::before,
+.v091-neo2 .v091-preview > header > b::before,
+.v091-app[data-ui="neo2"] .v091-editor > header > b::before,
+.v091-neo2 .v091-editor > header > b::before {
+  content: none !important;
+}
+.v091-app[data-ui="neo2"] .v091-editor > header > b::before,
+.v091-neo2 .v091-editor > header > b::before {
+  color: var(--neo-ink) !important;
+}
+
+/* ── Comfort / region separation (user palette) ────────────────────── */
+/* Desk vs white work surfaces already via --neo-desk / --neo-paper.
+   Keep vivid colors on small controls only. */
+
+/* Rail: warm secondary strip, not neon flood */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail {
+  background: var(--neo-yellow-deep) !important;
+}
+body[data-ui="neo2"] .rail button.active,
+html[data-ui="neo2"] .rail button.active {
+  background: var(--neo-yellow-bright) !important;
+}
+
+/* UI switch active = bright tape */
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
+.v091-neo2 .v091-ui-switch button.active {
+  background: var(--neo-yellow-bright) !important;
+}
+
+/* Editor header = quiet warm, not full neon */
+.v091-app[data-ui="neo2"] .v091-editor > header,
+.v091-neo2 .v091-editor > header {
+  background: rgba(235, 185, 86, 0.35) !important;
+}
+
+/* Toast uses secondary warm — less fatiguing than full bright yellow */
+.v091-app[data-ui="neo2"] .v091-toast,
+.v091-neo2 .v091-toast {
+  background: var(--neo-yellow-deep) !important;
+  color: var(--neo-ink) !important;
+}
+
+/* Footer calm warm band */
+.v091-app[data-ui="neo2"] > footer,
+.v091-neo2 > footer {
+  background: rgba(255, 220, 88, 0.55) !important;
+  color: var(--neo-ink) !important;
+}
+
+/* Selected cards: calm blue wash (already --neo-selected); reinforce */
+body[data-ui="neo2"] #quickStyleList .quick-style-card.active,
+html[data-ui="neo2"] #quickStyleList .quick-style-card.active {
+  background: var(--neo-selected) !important;
+}
+
+/* Monitor DIR accent already --neo-blue; warn labels use bright yellow */
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-dir,
+.v091-neo2 .v091-preview > header .v091-preview-dir {
+  color: var(--neo-monitor-accent) !important;
+}
+
+/* Status LED stays green; pill ink from palette */
+.v091-app[data-ui="neo2"] .v091-top-status,
+.v091-neo2 .v091-top-status {
+  background: var(--neo-ink) !important;
+  color: var(--neo-desk) !important;
+  border-color: var(--neo-ink) !important;
+}
+
+
+/* ── Fig1–3 annotated polish (Soft NEO site chrome) ───────────────── */
+
+/* ===== Fig1: left tabs + WRITE header — matched bright yellow bars ===== */
+/* Unselected rail strip = bright yellow; active tab = light desk */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail {
+  display: flex !important;
+  align-items: stretch !important;
+  min-height: 42px !important;
+  height: 42px !important;
+  border-bottom: 2px solid #1B1B1B !important;
+  box-shadow: none !important;
+}
+
+body[data-ui="neo2"] .rail button,
+html[data-ui="neo2"] .rail button {
+  flex: 1;
+  height: 100% !important;
+  min-height: 42px !important;
+  border: 0 !important;
+  border-right: 2px solid #1B1B1B !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body[data-ui="neo2"] .rail button:last-child,
+html[data-ui="neo2"] .rail button:last-child {
+  border-right: 0 !important;
+}
+
+body[data-ui="neo2"] .rail button:hover,
+html[data-ui="neo2"] .rail button:hover {
+  background: #FFDC58 !important;
+  transform: none !important;
+}
+
+body[data-ui="neo2"] .rail button.active,
+html[data-ui="neo2"] .rail button.active { /* selected = light bg */
+  box-shadow: inset 0 -4px 0 #1B1B1B !important;
+  color: #1B1B1B !important;
+}
+
+/* WRITE / section headers — same bright yellow as rail */
+.v091-app[data-ui="neo2"] .v091-editor > header,
+.v091-neo2 .v091-editor > header {
+  min-height: 42px !important;
+  height: 42px !important;
+  border-bottom: 2px solid #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor > header > b::before,
+.v091-neo2 .v091-editor > header > b::before {
+  content: "01 / WRITE  " !important;
+  color: #1B1B1B !important;
+  font: 800 9px ui-monospace, monospace !important;
+  letter-spacing: 0.08em;
+}
+
+/* ===== Fig2: blue preview top bar + light edit surfaces ===== */
+.v091-app[data-ui="neo2"] .v091-preview > header,
+.v091-neo2 .v091-preview > header {
+  border-bottom: 2px solid #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header b,
+.v091-neo2 .v091-preview > header b {
+  color: #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-dir,
+.v091-neo2 .v091-preview > header .v091-preview-dir {
+  color: #1B1B1B !important; /* contrast on blue */
+  font-weight: 900;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header button,
+.v091-neo2 .v091-preview > header button {
+  background: #F7F0D3 !important;
+  box-shadow: 2px 2px 0 #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview > header button:active,
+.v091-neo2 .v091-preview > header button:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 #1B1B1B !important;
+}
+
+/* Keep dark monitor body under blue title bar */
+.v091-app[data-ui="neo2"] .v091-preview-bg,
+.v091-neo2 .v091-preview-bg {
+  background: var(--neo-monitor) !important;
+}
+
+/* Global editing areas → light desk (NOT phone article interior) */
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor,
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-neo2 .v091-editor-scroll,
+.v091-neo2 .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+body[data-ui="neo2"] .side-main,
+html[data-ui="neo2"] .side-main {
+  background: #F7F0D3 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar,
+.v091-neo2 .v091-toolbar {
+  background: #F7F0D3 !important;
+}
+
+/* Floating cards stay white for hierarchy on light edit panels */
+body[data-ui="neo2"] .quick-style-card,
+body[data-ui="neo2"] .component-card,
+body[data-ui="neo2"] .heading-style-card,
+body[data-ui="neo2"] #draftList .draft,
+body[data-ui="neo2"] #quickStyleList .quick-style-card,
+html[data-ui="neo2"] .quick-style-card,
+html[data-ui="neo2"] .component-card,
+html[data-ui="neo2"] #quickStyleList .quick-style-card {
+  background: #FFFFFF !important;
+}
+
+/* Explicit: never paint desk color into WeChat article */
+.v091-app[data-ui="neo2"] .v091-wechat-article,
+.v091-neo2 .v091-wechat-article {
+  /* no background/color overrides */
+}
+
+/* ===== Fig3: top toolbar red hover + mode brand tabs ===== */
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-top-actions .v091-btn:hover,
+  .v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:hover,
+  .v091-neo2 .v091-top-actions .v091-btn:hover,
+  .v091-neo2 .v091-top-actions label.v091-btn:hover {
+    transform: none !important;
+    box-shadow: 3px 3px 0 #D04060 !important;
+  }
+
+  .v091-app[data-ui="neo2"] .v091-toolbar button:hover,
+  .v091-neo2 .v091-toolbar button:hover {
+    box-shadow: 3px 3px 0 #D04060 !important;
+  }
+}
+
+.v091-app[data-ui="neo2"] .v091-top-actions .v091-btn:active,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:active,
+.v091-neo2 .v091-top-actions .v091-btn:active,
+.v091-neo2 .v091-top-actions label.v091-btn:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 #1B1B1B !important;
+}
+
+/* Mode tabs always-visible brand colors (UI / Soft NEO / Tactile Lab) */
+.v091-app .v091-ui-switch {
+  border: 2px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #1B1B1B !important;
+  border-radius: 5px !important;
+  overflow: hidden;
+}
+
+.v091-app .v091-ui-switch em { /* UI → black */
+  color: #F7F0D3 !important;
+  font-weight: 800 !important;
+}
+
+.v091-app .v091-ui-switch button:first-of-type { /* Soft NEO → purple */
+  font-weight: 850 !important;
+}
+
+.v091-app .v091-ui-switch button:last-of-type { /* Tactile Lab idle */
+  font-weight: 850 !important;
+}
+
+.v091-app .v091-ui-switch button:last-of-type.active { /* Tactile selected = dark yellow */
+  color: #1B1B1B !important;
+  box-shadow: inset 0 -3px 0 #1B1B1B !important;
+}
+
+.v091-app .v091-ui-switch button:first-of-type.active {
+  color: #FFFFFF !important;
+  box-shadow: inset 0 -3px 0 #1B1B1B !important;
+}
+
+/* Soft NEO path: kill prior yellow-active override on ui-switch */
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
+.v091-neo2 .v091-ui-switch button.active {
+  background: #A855F7 !important;
+  color: #FFFFFF !important;
+}
+.v091-app[data-ui="neo2"] .v091-ui-switch button:last-of-type.active,
+.v091-neo2 .v091-ui-switch button:last-of-type.active {
+  background: #EBB956 !important;
+  color: #1B1B1B !important;
+}
+
+
+/* ── DevForge + StatFlow bold chrome (Soft NEO only) ──────────────── */
+/* Strong role colors, cream grid desk, double hard CTA shadows.
+   Phone article interior still untouched. */
+
+.v091-app[data-ui="neo2"],
+.v091-neo2 {
+  --neo-cta-shadow: 4px 4px 0 #1B1B1B, 8px 8px 0 #37BDF9;
+  --neo-cta-shadow-hover: 3px 3px 0 #D04060, 6px 6px 0 #FFDC58;
+  --neo-desk: #F7F0D3;
+  --neo-ink: #1B1B1B;
+  background-color: #F7F0D3 !important;
+  background-image:
+    linear-gradient(rgba(27, 27, 27, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 27, 27, 0.07) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+/* Topbar — StatFlow white plate on cream desk */
+.v091-app[data-ui="neo2"] .v091-topbar,
+.v091-neo2 .v091-topbar {
+  background: #FFFFFF !important;
+  border-bottom: 3px solid #1B1B1B !important;
+  box-shadow: 0 4px 0 #1B1B1B !important;
+}
+
+/* Brand mark — yellow tape sticker */
+.v091-app[data-ui="neo2"] .v091-brand > b,
+.v091-neo2 .v091-brand > b {
+  background: #FFDC58 !important;
+  border: 2px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #1B1B1B !important;
+  color: #1B1B1B !important;
+}
+.v091-app[data-ui="neo2"] .v091-brand i,
+.v091-neo2 .v091-brand i {
+  color: #D04060 !important;
+  font-weight: 900 !important;
+}
+
+/* Mode tabs — bold brand roles (always-visible) */
+.v091-app .v091-ui-switch {
+  border: 2.5px solid #1B1B1B !important;
+  box-shadow: 4px 4px 0 #1B1B1B !important;
+}
+.v091-app .v091-ui-switch em {
+  background: #1B1B1B !important;
+  color: #FFDC58 !important;
+  letter-spacing: 0.08em;
+}
+.v091-app .v091-ui-switch button:first-of-type {
+  background: #A855F7 !important;
+  color: #FFFFFF !important;
+  text-shadow: none;
+}
+.v091-app .v091-ui-switch button:last-of-type {
+  background: #F7F0D3 !important;
+  color: #1B1B1B !important;
+}
+.v091-app .v091-ui-switch button:last-of-type.active {
+  background: #EBB956 !important;
+  box-shadow: inset 0 -4px 0 #1B1B1B !important;
+}
+.v091-app .v091-ui-switch button:first-of-type.active {
+  background: #A855F7 !important;
+  box-shadow: inset 0 -4px 0 #1B1B1B !important;
+}
+
+/* Toolbar buttons — cream faces, ink edge, red hover shadow */
+.v091-app[data-ui="neo2"] .v091-btn,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn,
+.v091-neo2 .v091-btn,
+.v091-neo2 .v091-top-actions label.v091-btn {
+  background: #F7F0D3 !important;
+  color: #1B1B1B !important;
+  border: 2.5px solid #1B1B1B !important;
+  box-shadow: 4px 4px 0 #1B1B1B !important;
+  font-weight: 900 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-btn.ai,
+.v091-neo2 .v091-btn.ai {
+  color: #1B1B1B !important;
+  box-shadow: 4px 4px 0 #1B1B1B, 8px 8px 0 #37BDF9 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-btn.primary,
+.v091-neo2 .v091-btn.primary,
+body[data-ui="neo2"] .btn.primary,
+html[data-ui="neo2"] .btn.primary {
+  background: #D04060 !important;
+  color: #FFFFFF !important;
+  border: 2.5px solid #1B1B1B !important;
+  /* DevForge-style double hard shadow: ink + blue */
+  box-shadow: 4px 4px 0 #1B1B1B, 8px 8px 0 #37BDF9 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-btn:hover,
+  .v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:hover,
+  .v091-neo2 .v091-btn:hover,
+  .v091-neo2 .v091-top-actions label.v091-btn:hover,
+  body[data-ui="neo2"] .btn:hover,
+  html[data-ui="neo2"] .btn:hover {
+    transform: none !important;
+    box-shadow: 3px 3px 0 #D04060, 6px 6px 0 #FFDC58 !important;
+  }
+  .v091-app[data-ui="neo2"] .v091-btn.primary:hover,
+  .v091-neo2 .v091-btn.primary:hover {
+    box-shadow: 3px 3px 0 #1B1B1B, 6px 6px 0 #FFDC58 !important;
+  }
+}
+
+.v091-app[data-ui="neo2"] .v091-btn:active,
+.v091-app[data-ui="neo2"] .v091-top-actions label.v091-btn:active,
+.v091-neo2 .v091-btn:active,
+.v091-neo2 .v091-top-actions label.v091-btn:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 #1B1B1B !important;
+}
+
+/* Status chips — black pills, yellow/green signal */
+.v091-app[data-ui="neo2"] .v091-top-chip,
+.v091-neo2 .v091-top-chip {
+  background: #1B1B1B !important;
+  color: #F7F0D3 !important;
+  border: 2px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #37BDF9 !important;
+}
+.v091-app[data-ui="neo2"] .v091-top-status,
+.v091-neo2 .v091-top-status {
+  background: #1B1B1B !important;
+  color: #FFDC58 !important;
+  border: 2px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #D04060 !important;
+}
+
+/* Fig1 reinforced: yellow structural bars, light active */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail {
+  background: #FFDC58 !important;
+  border-bottom: 3px solid #1B1B1B !important;
+}
+body[data-ui="neo2"] .rail button,
+html[data-ui="neo2"] .rail button {
+  background: #FFDC58 !important;
+  color: #1B1B1B !important;
+  font-weight: 900 !important;
+}
+body[data-ui="neo2"] .rail button.active,
+html[data-ui="neo2"] .rail button.active {
+  box-shadow: inset 0 -5px 0 #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor > header,
+.v091-neo2 .v091-editor > header {
+  border-bottom: 3px solid #1B1B1B !important;
+  color: #1B1B1B !important;
+}
+
+/* Left/center panes — bold ink frame on cream desk */
+.v091-app[data-ui="neo2"] .v091-sidebar,
+.v091-app[data-ui="neo2"] .v091-sidebar-host,
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-sidebar,
+.v091-neo2 .v091-sidebar-host,
+.v091-neo2 .v091-editor,
+body[data-ui="neo2"] .sidebar {
+  border: 2.5px solid #1B1B1B !important;
+  box-shadow: 5px 5px 0 #1B1B1B !important;
+  background: #F7F0D3 !important;
+}
+
+/* Floating option cards — white stickers */
+body[data-ui="neo2"] .quick-style-card,
+body[data-ui="neo2"] .component-card,
+body[data-ui="neo2"] #quickStyleList .quick-style-card,
+html[data-ui="neo2"] .quick-style-card,
+html[data-ui="neo2"] .component-card {
+  background: #FFFFFF !important;
+  border: 2.5px solid #1B1B1B !important;
+  box-shadow: 4px 4px 0 #1B1B1B !important;
+}
+
+/* Yellow tape badges — louder */
+body[data-ui="neo2"] .section-kicker,
+html[data-ui="neo2"] .section-kicker,
+body[data-ui="neo2"] [data-neo-tape],
+html[data-ui="neo2"] [data-neo-tape],
+body[data-ui="neo2"] .sec > h3:not(.big-side-title),
+html[data-ui="neo2"] .sec > h3:not(.big-side-title) {
+  border: 2.5px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #1B1B1B !important;
+  color: #1B1B1B !important;
+}
+
+/* Preview — blue title bar + dark body (monitor) */
+.v091-app[data-ui="neo2"] .v091-preview,
+.v091-neo2 .v091-preview {
+  border: 3px solid #1B1B1B !important;
+  box-shadow: 6px 6px 0 #1B1B1B, 10px 10px 0 #37BDF9 !important;
+  background: #141414 !important;
+}
+.v091-app[data-ui="neo2"] .v091-preview > header,
+.v091-neo2 .v091-preview > header {
+  border-bottom: 3px solid #1B1B1B !important;
+}
+.v091-app[data-ui="neo2"] .v091-preview > header b,
+.v091-app[data-ui="neo2"] .v091-preview > header .v091-preview-dir,
+.v091-neo2 .v091-preview > header b,
+.v091-neo2 .v091-preview > header .v091-preview-dir {
+  color: #1B1B1B !important;
+  font-weight: 900 !important;
+}
+.v091-app[data-ui="neo2"] .v091-preview > header button,
+.v091-neo2 .v091-preview > header button {
+  background: #FFDC58 !important;
+  color: #1B1B1B !important;
+  border: 2px solid #1B1B1B !important;
+  box-shadow: 3px 3px 0 #1B1B1B !important;
+}
+
+/* Edit canvas light paper */
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-neo2 .v091-editor-scroll,
+body[data-ui="neo2"] .side-main {
+  background: #F7F0D3 !important;
+}
+
+/* Footer yellow tape bar */
+.v091-app[data-ui="neo2"] > footer,
+.v091-neo2 > footer {
+  background: #FFDC58 !important;
+  border-top: 3px solid #1B1B1B !important;
+  color: #1B1B1B !important;
+  font-weight: 900 !important;
+  box-shadow: inset 0 3px 0 #1B1B1B;
+}
+
+/* Family lift shadows stay vivid */
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="read"] { --neo-family-lift-shadow: 8px 8px 0 #37BDF9; }
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="voice"] { --neo-family-lift-shadow: 8px 8px 0 #D04060; }
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="brand"] { --neo-family-lift-shadow: 8px 8px 0 #FFDC58; }
+body[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="pulse"] { --neo-family-lift-shadow: 8px 8px 0 #A855F7; }
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="read"] { --neo-family-lift-shadow: 8px 8px 0 #37BDF9; }
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="voice"] { --neo-family-lift-shadow: 8px 8px 0 #D04060; }
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="brand"] { --neo-family-lift-shadow: 8px 8px 0 #FFDC58; }
+html[data-ui="neo2"] #quickStyleList .quick-style-card[data-family="pulse"] { --neo-family-lift-shadow: 8px 8px 0 #A855F7; }
+
+/* NEVER touch WeChat article skins */
+.v091-app[data-ui="neo2"] .v091-wechat-article,
+.v091-neo2 .v091-wechat-article {
+  /* intentional no-op */
+}
+
+
+/* ── User exact: cream preview body + yellow headers (Soft NEO) ────── */
+/* Tab bar + WRITE header: #FFDC58
+   Edit area + preview BODY bg: #F7F0D3 (NOT dark)
+   Phone article interior: untouched */
+
+/* Edit surfaces cream */
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor,
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-neo2 .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-toolbar,
+.v091-neo2 .v091-toolbar,
+body[data-ui="neo2"] .side-main,
+html[data-ui="neo2"] .side-main {
+  background: #F7F0D3 !important;
+}
+
+/* Preview BODY / pane / scroll area → cream (not dark charcoal) */
+.v091-app[data-ui="neo2"] .v091-preview,
+.v091-neo2 .v091-preview {
+  background: #F7F0D3 !important;
+  color: #1B1B1B !important;
+  /* keep hard frame; drop blue double-shadow sink into cream desk */
+  box-shadow: 5px 5px 0 #1B1B1B !important;
+  border: 2.5px solid #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-preview-bg,
+.v091-neo2 .v091-preview-bg {
+  background-color: #F7F0D3 !important;
+  background-image:
+    linear-gradient(rgba(27, 27, 27, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 27, 27, 0.06) 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+}
+
+/* Preview title bar stays blue for region cue (prior fig); body is cream */
+.v091-app[data-ui="neo2"] .v091-preview > header,
+.v091-neo2 .v091-preview > header {
+  background: #37BDF9 !important;
+  color: #1B1B1B !important;
+}
+
+/* Do NOT paint cream into phone article */
+.v091-app[data-ui="neo2"] .v091-wechat-article,
+.v091-neo2 .v091-wechat-article,
+.v091-app[data-ui="neo2"] .v091-wechat-phone .v091-wechat-article {
+  /* no bg override — WeChat skins win */
+}
+
+
+/* ── Editor bg matches tab bar yellow (Soft NEO) ───────────────────── */
+/* User: bright yellow = rgb(255,220,88) #FFDC58
+   Tab bar bg === editor content surface (same computed color).
+   Selected tab may use cream inset for readability.
+   Phone article untouched. */
+
+.v091-app[data-ui="neo2"],
+.v091-neo2,
+html[data-ui="neo2"],
+body[data-ui="neo2"] {
+  --neo-yellow-bright: #FFDC58;
+  --neo-yellow: #FFDC58;
+}
+
+/* 4-tab rail */
+body[data-ui="neo2"] .rail,
+html[data-ui="neo2"] .rail,
+body[data-ui="neo2"] .rail button,
+html[data-ui="neo2"] .rail button {
+  background: #FFDC58 !important;
+}
+body[data-ui="neo2"] .rail button.active,
+html[data-ui="neo2"] .rail button.active {
+  background: #F7F0D3 !important; /* contrast inset only */
+}
+
+/* WRITE header */
+.v091-app[data-ui="neo2"] .v091-editor > header,
+.v091-neo2 .v091-editor > header {
+  background: #FFDC58 !important;
+}
+
+/* Editor area = same yellow as tab bar (NOT cream) */
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor,
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .ProseMirror,
+.v091-neo2 .v091-editor-scroll,
+.v091-neo2 .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-toolbar,
+.v091-neo2 .v091-toolbar {
+  background: #FFDC58 !important;
+  background-color: #FFDC58 !important;
+}
+
+/* Tape badges / structural yellow accents */
+body[data-ui="neo2"] .section-kicker,
+html[data-ui="neo2"] .section-kicker,
+body[data-ui="neo2"] [data-neo-tape],
+html[data-ui="neo2"] [data-neo-tape],
+body[data-ui="neo2"] .sec > h3:not(.big-side-title),
+html[data-ui="neo2"] .sec > h3:not(.big-side-title) {
+  background: #FFDC58 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-btn.ai,
+.v091-neo2 .v091-btn.ai {
+  background: #FFDC58 !important;
+}
+
+/* Phone article still no force */
+.v091-app[data-ui="neo2"] .v091-wechat-article,
+.v091-neo2 .v091-wechat-article {
+  /* untouched */
+}
+
+
+/* ── Editor UX: paper bg + icon toolbar + table grid (Soft NEO) ───── */
+/* Editor content #FFFDF6; tab bar stays yellow. Export skins untouched. */
+
+.v091-app[data-ui="neo2"] .v091-editor-scroll,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .tiptap,
+.v091-app[data-ui="neo2"] .v091-rich-editor-shell .ProseMirror,
+.v091-neo2 .v091-editor-scroll,
+.v091-neo2 .v091-rich-editor-shell,
+.v091-neo2 .v091-rich-editor-shell .tiptap,
+.v091-neo2 .ProseMirror {
+  background: #FFFDF6 !important;
+  background-color: #FFFDF6 !important;
+}
+
+/* Keep pane chrome; content surface is paper — don't force whole .v091-editor yellow */
+.v091-app[data-ui="neo2"] .v091-editor,
+.v091-neo2 .v091-editor {
+  background: #FFFDF6 !important;
+}
+
+/* Toolbar strip: light paper, icon-only neo buttons */
+.v091-app[data-ui="neo2"] .v091-toolbar,
+.v091-neo2 .v091-toolbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 6px 8px !important;
+  background: #FFFDF6 !important;
+  border-bottom: 2px solid #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar .v091-tool,
+.v091-app[data-ui="neo2"] .v091-toolbar button.v091-tool,
+.v091-neo2 .v091-toolbar .v091-tool,
+.v091-neo2 .v091-toolbar button.v091-tool {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border: 2px solid #1B1B1B !important;
+  border-radius: 4px !important;
+  background: #FFFFFF !important;
+  color: #1B1B1B !important;
+  box-shadow: 2px 2px 0 #1B1B1B !important;
+  font-size: 0 !important; /* no text labels */
+  line-height: 0 !important;
+  cursor: pointer;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar .v091-tool svg,
+.v091-neo2 .v091-toolbar .v091-tool svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v091-app[data-ui="neo2"] .v091-toolbar .v091-tool:hover,
+  .v091-neo2 .v091-toolbar .v091-tool:hover {
+    background: #FFDC58 !important;
+    box-shadow: 3px 3px 0 #D04060 !important;
+    transform: none !important;
+  }
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar .v091-tool:active,
+.v091-neo2 .v091-toolbar .v091-tool:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 #1B1B1B !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar .v091-tool:disabled,
+.v091-neo2 .v091-toolbar .v091-tool:disabled {
+  opacity: 0.35;
+  transform: none !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-toolbar > i,
+.v091-neo2 .v091-toolbar > i {
+  width: 1px;
+  align-self: stretch;
+  min-height: 22px;
+  margin: 4px 4px;
+  background: rgba(27, 27, 27, 0.25);
+}
+
+/* Editor-only table grid — do NOT affect WeChat phone article */
+.v091-app[data-ui="neo2"] .v091-editor .tiptap table,
+.v091-app[data-ui="neo2"] .v091-editor .ProseMirror table,
+.v091-neo2 .v091-editor .tiptap table,
+.v091-neo2 .v091-editor .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse !important;
+  border: 1.5px solid #1B1B1B !important;
+  margin: 12px 0 !important;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor .tiptap th,
+.v091-app[data-ui="neo2"] .v091-editor .tiptap td,
+.v091-app[data-ui="neo2"] .v091-editor .ProseMirror th,
+.v091-app[data-ui="neo2"] .v091-editor .ProseMirror td,
+.v091-neo2 .v091-editor .tiptap th,
+.v091-neo2 .v091-editor .tiptap td,
+.v091-neo2 .v091-editor .ProseMirror th,
+.v091-neo2 .v091-editor .ProseMirror td {
+  border: 1.5px solid #1B1B1B !important;
+  padding: 8px 10px !important;
+  min-width: 48px;
+  vertical-align: top;
+  background: #FFFDF6;
+}
+
+.v091-app[data-ui="neo2"] .v091-editor .tiptap th,
+.v091-app[data-ui="neo2"] .v091-editor .ProseMirror th,
+.v091-neo2 .v091-editor .tiptap th,
+.v091-neo2 .v091-editor .ProseMirror th {
+  background: #FFDC58 !important;
+  font-weight: 800 !important;
+}
+
+/* Prefer editor-global (even outside Soft NEO) for WYSIWYG clarity — still editor-scoped */
+.v091-editor .tiptap table,
+.v091-editor .ProseMirror table {
+  border-collapse: collapse;
+  border: 1px solid #1B1B1B;
+}
+.v091-editor .tiptap th,
+.v091-editor .tiptap td,
+.v091-editor .ProseMirror th,
+.v091-editor .ProseMirror td {
+  border: 1px solid #1B1B1B;
+  padding: 6px 8px;
+}
+
+
+/* ── Panel UX: Chinese follow/heading labels + larger thumbs ───────── */
+/* Soft NEO chrome only — export skins unchanged except img referrerpolicy */
+
+/* Kill English FOLLOW / HEAD tape labels → use Chinese data-label */
+body[data-ui="neo2"] .follow-template-grid > button::before,
+html[data-ui="neo2"] .follow-template-grid > button::before {
+  content: attr(data-label) !important;
+  letter-spacing: 0.04em !important;
+  font-size: 9px !important;
+  justify-content: flex-start !important;
+  padding: 0 8px !important;
+}
+
+body[data-ui="neo2"] .heading-style-card::before,
+html[data-ui="neo2"] .heading-style-card::before {
+  content: attr(data-label) !important;
+  letter-spacing: 0.02em !important;
+  font-size: 9px !important;
+  justify-content: flex-start !important;
+  padding: 0 8px !important;
+  text-transform: none !important;
+}
+
+/* Larger follow thumbs — more diagram, less chrome waste */
+body[data-ui="neo2"] .follow-template-grid,
+html[data-ui="neo2"] .follow-template-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+body[data-ui="neo2"] .follow-template-grid > button,
+html[data-ui="neo2"] .follow-template-grid > button {
+  padding: 26px 8px 10px !important;
+  min-height: 108px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+
+body[data-ui="neo2"] .follow-template-grid > button > .ft,
+html[data-ui="neo2"] .follow-template-grid > button > .ft {
+  min-height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px;
+  margin: 0 0 8px !important;
+  padding: 10px 8px !important;
+  border: 1.5px solid rgba(27, 27, 27, 0.35);
+  border-radius: 6px;
+  background: #FFFDF6;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #1B1B1B;
+}
+
+body[data-ui="neo2"] .follow-template-grid > button > b,
+html[data-ui="neo2"] .follow-template-grid > button > b {
+  margin-top: auto !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  text-align: center;
+}
+
+body[data-ui="neo2"] .ft-brand,
+html[data-ui="neo2"] .ft-brand {
+  background: #37BDF9 !important;
+  color: #1B1B1B !important;
+  border-color: #1B1B1B !important;
+}
+body[data-ui="neo2"] .ft-neo,
+html[data-ui="neo2"] .ft-neo {
+  background: #FFDC58 !important;
+  border: 2px solid #1B1B1B !important;
+}
+body[data-ui="neo2"] .ft-qr i,
+html[data-ui="neo2"] .ft-qr i {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #1B1B1B;
+  background:
+    linear-gradient(#1B1B1B, #1B1B1B) 20% 20% / 25% 25% no-repeat,
+    linear-gradient(#1B1B1B, #1B1B1B) 70% 20% / 25% 25% no-repeat,
+    linear-gradient(#1B1B1B, #1B1B1B) 20% 70% / 25% 25% no-repeat,
+    #FFFDF6;
+}
+
+/* Heading cards: bigger preview, compact meta */
+body[data-ui="neo2"] .heading-style-grid,
+html[data-ui="neo2"] .heading-style-grid,
+body[data-ui="neo2"] #headingStyles.heading-style-grid,
+html[data-ui="neo2"] #headingStyles.heading-style-grid {
+  gap: 8px !important;
+}
+
+body[data-ui="neo2"] .heading-style-card,
+html[data-ui="neo2"] .heading-style-card {
+  padding: 24px 8px 8px !important;
+  min-height: 96px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+body[data-ui="neo2"] .heading-style-card .heading-preview,
+html[data-ui="neo2"] .heading-style-card .heading-preview {
+  flex: 1 1 auto;
+  min-height: 44px !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 8px 10px !important;
+  border: 1.5px solid rgba(27, 27, 27, 0.28);
+  border-radius: 5px;
+  background: #FFFDF6;
+  overflow: hidden;
+}
+
+body[data-ui="neo2"] .heading-style-card .heading-meta b,
+html[data-ui="neo2"] .heading-style-card .heading-meta b,
+body[data-ui="neo2"] .heading-style-card > span > b,
+html[data-ui="neo2"] .heading-style-card > span > b {
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+body[data-ui="neo2"] .heading-style-card .heading-meta small,
+html[data-ui="neo2"] .heading-style-card .heading-meta small,
+body[data-ui="neo2"] .heading-style-card small,
+html[data-ui="neo2"] .heading-style-card small {
+  font-size: 10px !important;
+  white-space: normal !important;
+  line-height: 1.35 !important;
+}
+
+/* Preview article: help WeChat covers load in browser desk preview */
+.v091-app[data-ui="neo2"] .v091-wechat-article img,
+.v091-neo2 .v091-wechat-article img {
+  /* attribute set in HTML; this reinforces decoding */
+  image-rendering: auto;
+}
+
+
+
+/* ── Panel polish: no bottom dup labels + bigger diagrams ──────────── */
+body[data-ui="neo2"] .follow-template-grid > button,
+html[data-ui="neo2"] .follow-template-grid > button {
+  padding: 28px 8px 10px !important;
+  min-height: 118px !important;
+}
+body[data-ui="neo2"] .follow-template-grid > button > .ft,
+html[data-ui="neo2"] .follow-template-grid > button > .ft {
+  flex: 1 1 auto;
+  min-height: 72px !important;
+  margin: 0 !important;
+  font-size: 13px !important;
+}
+body[data-ui="neo2"] .follow-template-grid > button > b,
+html[data-ui="neo2"] .follow-template-grid > button > b {
+  display: none !important;
+}
+
+body[data-ui="neo2"] .heading-style-card,
+html[data-ui="neo2"] .heading-style-card {
+  padding: 26px 8px 10px !important;
+  min-height: 110px !important;
+}
+body[data-ui="neo2"] .heading-style-card .heading-preview,
+html[data-ui="neo2"] .heading-style-card .heading-preview {
+  min-height: 68px !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+body[data-ui="neo2"] .heading-style-card .heading-meta,
+html[data-ui="neo2"] .heading-style-card .heading-meta {
+  display: none !important;
+}
+
+body[data-ui="neo2"] .hp-rail,
+html[data-ui="neo2"] .hp-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-weight: 850;
+}
+body[data-ui="neo2"] .hp-rail > b,
+html[data-ui="neo2"] .hp-rail > b {
+  font-size: 22px;
+  line-height: 1;
+  color: #1B1B1B;
+}
+body[data-ui="neo2"] .hp-rail > i,
+html[data-ui="neo2"] .hp-rail > i {
+  flex: 1;
+  height: 2px;
+  background: #1B1B1B;
+  display: block;
+}
+body[data-ui="neo2"] .hp-rail > em,
+html[data-ui="neo2"] .hp-rail > em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 800;
+}
+body[data-ui="neo2"] .hp-ribbon,
+html[data-ui="neo2"] .hp-ribbon {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  overflow: hidden;
+  border: 1.5px solid #1B1B1B;
+  border-radius: 4px;
+}
+body[data-ui="neo2"] .hp-ribbon > i,
+html[data-ui="neo2"] .hp-ribbon > i {
+  width: 8px;
+  background: #37BDF9;
+  display: block;
+}
+body[data-ui="neo2"] .hp-ribbon > span,
+html[data-ui="neo2"] .hp-ribbon > span {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  background: #FFFDF6;
+}
+body[data-ui="neo2"] .hp-editorial,
+html[data-ui="neo2"] .hp-editorial {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+body[data-ui="neo2"] .hp-editorial small,
+html[data-ui="neo2"] .hp-editorial small {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(27,27,27,.55);
+}
+body[data-ui="neo2"] .hp-editorial b,
+html[data-ui="neo2"] .hp-editorial b {
+  font-size: 14px;
+  border-bottom: 2px solid #1B1B1B;
+  padding-bottom: 3px;
+}
+body[data-ui="neo2"] .hp-marker-half,
+html[data-ui="neo2"] .hp-marker-half {
+  font-size: 14px;
+  font-weight: 850;
+  background: linear-gradient(to top, #FFDC58 50%, transparent 50%);
+  padding: 0 2px;
+}
+body[data-ui="neo2"] .hp-marker-tag,
+html[data-ui="neo2"] .hp-marker-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+body[data-ui="neo2"] .hp-marker-tag > i,
+html[data-ui="neo2"] .hp-marker-tag > i {
+  font-style: normal;
+  background: #FFDC58;
+  border: 1.5px solid #1B1B1B;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+body[data-ui="neo2"] .hp-eyebrow,
+html[data-ui="neo2"] .hp-eyebrow {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(27,27,27,.55);
+  margin-bottom: 2px;
+}
+body[data-ui="neo2"] .hp-icon,
+html[data-ui="neo2"] .hp-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #1B1B1B;
+  margin-right: 6px;
+  font-size: 12px;
+}
+body[data-ui="neo2"] .hp-avatar,
+html[data-ui="neo2"] .hp-avatar {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid #1B1B1B;
+  align-items: center;
+  justify-content: center;
+  background: #FFDC58;
+  font-size: 11px;
+  font-weight: 850;
+  margin-right: 8px;
+}
+body[data-ui="neo2"] .hp-stack,
+html[data-ui="neo2"] .hp-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 800;
+}
+body[data-ui="neo2"] .hp-stack .hp-avatar,
+html[data-ui="neo2"] .hp-stack .hp-avatar {
+  margin-right: 0;
+}
+body[data-ui="neo2"] .hp-big,
+html[data-ui="neo2"] .hp-big {
+  display: block;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  margin-right: 8px;
+}
+body[data-ui="neo2"] .hp-brand,
+html[data-ui="neo2"] .hp-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+body[data-ui="neo2"] .hp-brand small,
+html[data-ui="neo2"] .hp-brand small {
+  font-size: 10px;
+  color: rgba(27,27,27,.55);
+}
+body[data-ui="neo2"] .hp-brand b,
+html[data-ui="neo2"] .hp-brand b {
+  font-size: 14px;
+}
+body[data-ui="neo2"] .hp-brand em,
+html[data-ui="neo2"] .hp-brand em {
+  font-style: normal;
+  font-size: 11px;
+  color: rgba(27,27,27,.6);
+}
+
+.v091-app[data-ui="neo2"] .v091-editor-component.follow,
+.v091-neo2 .v091-editor-component.follow {
+  border: 2px solid #1B1B1B !important;
+  background: #FFFDF6 !important;
+  padding: 12px 14px !important;
+  box-shadow: 3px 3px 0 #1B1B1B;
+}
+.v091-app[data-ui="neo2"] .v091-editor-component.follow::before,
+.v091-neo2 .v091-editor-component.follow::before {
+  content: "关注模块";
+  display: block;
+  font: 800 10px/1 ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  color: #D04060;
+}
+
+/* Explicitly leave Tactile Lab alone — no rules under [data-ui="tactile"] / .v091-tactile */

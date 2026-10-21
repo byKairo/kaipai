@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kaipai",
+  "compatibility_date": "2026-10-21",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "main": "vinext/server/fetch-handler",
+  "assets": {
+    "directory": "dist/client",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/*",
+      "!/_next/static/*",
+      "!/*/_next/static/*"
+    ]
+  },
+  "vars": {
+    "KAIPAI_DNS_RESOLVER": "records"
+  },
+  "account_id": "e88e7ed4e217c2f22dc3bd17fde8ee1d",
+  "workers_dev": true
+}

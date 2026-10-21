@@ -1,0 +1,17 @@
+Create an original editorial long infographic for a WeChat article, portrait 1024x2304 or similar tall aspect ratio 2.25:1, actual finished publishable article image NOT a UI mockup, NOT a style comparison board. Title: "把注意力还给自己". This is a short visual essay about attention, not an event, no invented date/place/person. Inspired by the tactile material of fine white handmade cotton paper: clearly visible but delicate organic fibers, softly pressed paper surface over the ENTIRE image from top to bottom, warm white not yellow, fine cool-gray ink. Typography-led quiet sophisticated Chinese editorial design, precise modern Songti serif Chinese typography with restrained small gray-blue sans secondary annotations. Large comfortable margins; strong alignment and coherent downward reading; readable on a 390px wide phone. Text body >=46px equivalent in 1024px canvas, chapter title ~54px, main title ~100px. Don't miniaturize text. More original composition than a flat numbered list: top asymmetric quiet title block in upper left with tiny "阅读札记 / 01" overline, title in two spacious lines. Upper right small abstract graphite illustration of ripples/attention rings and an empty chair, extremely subtle. Four vertically sequenced small sections with oversized pale blue-gray numbers offset in left margin; each section uses a slightly different but coherent visual arrangement; one ink sketch of an open book in a margin, tiny line-drawn hourglass near third section, fourth section mostly blank space around a large short sentence. Plenty of purposeful negative space, thin gray-blue hairline rules, NO colored panels, NO glossy shadows, no generic AI gradient, no shiny illustrations. This must be beautiful like a real art-directed independent print journal photographed flat, but straight-on without perspective. Do not copy any existing magazine layout, no faux brand logos.
+
+Exact visible Chinese text, use verbatim with correct punctuation and no added paragraphs:
+Overline "阅读札记 / 01"
+Main title "把注意力" line break "还给自己"
+Subtitle "少一点被推着走，多一点自己选择。"
+Section 01 title "给信息留一道门"
+Body "消息不必立刻回复。每天留一段不被通知打断的时间。"
+Section 02 title "把一件事做完整"
+Body "关掉多余的窗口。先读完一页，写完一段，再开始下一件事。"
+Section 03 title "允许空白存在"
+Body "散步时不戴耳机。等车时不急着刷屏。让想法有机会自己出现。"
+Section 04 title "把判断留在手里"
+Body "工具可以帮忙，选择仍然属于你。"
+Bottom large final sentence "留白，是给自己留下位置。"
+Tiny footer "楷排 · 原创排版示例"
+No other text. Entire image paper texture visible including between all sections, not just header. Faint fiber texture never harms dark text contrast. Flat image ready to upload as ordinary image to WeChat.

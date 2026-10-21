@@ -1,0 +1,88 @@
+{
+  "source": "https://github.com/wechatjs/verify-article-structure-spec/blob/main/verify_article_structure.md",
+  "platformPasteVerified": false,
+  "remarks": "Static check and browser rendering are not platform verification. No mandatory font family or paper texture. Same original sample text for comparisons.",
+  "styles": [
+    {
+      "id": "minimal",
+      "name": "极简知识",
+      "file": "01-minimal.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "column",
+      "name": "观点专栏",
+      "file": "02-column.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "tech",
+      "name": "科技观察",
+      "file": "03-tech.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "brief",
+      "name": "商务简报",
+      "file": "04-brief.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "report",
+      "name": "研究报告",
+      "file": "05-report.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "magazine",
+      "name": "纸感杂志",
+      "file": "06-magazine.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "guide",
+      "name": "步骤指南",
+      "file": "07-guide.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "brand",
+      "name": "品牌故事",
+      "file": "08-brand.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "event",
+      "name": "活动特刊",
+      "file": "09-event.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "culture",
+      "name": "现代中式",
+      "file": "10-culture.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "essay",
+      "name": "文化随笔",
+      "file": "11-essay.html",
+      "staticViolations": 0
+    },
+    {
+      "id": "pop",
+      "name": "轻快刊物",
+      "file": "12-pop.html",
+      "staticViolations": 0
+    }
+  ],
+  "browser": {
+    "engine": "Chrome headless",
+    "widths": [
+      320,
+      390,
+      430
+    ],
+    "overflowFailures": []
+  }
+}

@@ -7,6 +7,7 @@ import { wechatMinLineHeight, wechatTextStyle, wechatBox } from './wechat-typogr
 import { enforceWechatCompliance } from './wechat-compliance';
 import { displayHeadingWithoutNumber, normalizeMarkdownTables } from './ai-layout';
 import { escapeHtml, htmlToPlainText } from './wechat-text';
+import { safeArticleLink } from './article-link';
 export { escapeHtml, htmlToPlainText } from './wechat-text';
 import { cottonTexture } from './article-styles/paper-texture';
 import { SAMPLE_IMAGE } from './article-styles/sample-image';
@@ -152,14 +153,28 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
         // Inline code: dark charcoal chip + light text on dark paper; soft chip + dark ink on light.
         const codeColor = darkPaper ? '#e8eaed' : '#1a1a1a';
         const codeBg = darkPaper ? '#2a2e36' : '#eceff3';
-        return escapeHtml(value)
+        const formatText = (text: string) => escapeHtml(text)
             .replace(/\[\^([\w-]+)\]/g, `<sup style="${wechatTextStyle(11)};color:${accentLabel}">$1</sup>`)
             .replace(/\*\*(.*?)\*\*/g, `<strong style="${type};font-weight:800">$1</strong>`)
             .replace(/\*(.*?)\*/g, `<em style="${type}">$1</em>`)
             .replace(/~~(.*?)~~/g, `<span style="text-decoration:line-through;${type}">$1</span>`)
             .replace(/==(.*?)==/g, `<span style="${markSkin.css}${type}">$1</span>`)
-            .replace(/`([^`]+)`/g, `<span style="padding:1px 5px;background-color:${codeBg};color:${codeColor};${codeType};font-family:Menlo,Monaco,Consolas,ui-monospace,monospace">$1</span>`)
-            .replace(/\[(.*?)\]\((.*?)\)/g, `<a href="$2" style="color:${linkAccent};text-decoration:underline;${type}">$1</a>`);
+            .replace(/`([^`]+)`/g, `<span style="padding:1px 5px;background-color:${codeBg};color:${codeColor};${codeType};font-family:Menlo,Monaco,Consolas,ui-monospace,monospace">$1</span>`);
+        // Parse destinations before adding any HTML formatting. Generated tags
+        // must never become part of an href or be parsed as more Markdown.
+        let tokenPrefix = '\uE000kaipai-link-';
+        while (value.includes(tokenPrefix)) tokenPrefix += '-';
+        const links: string[] = [];
+        const text = value.replace(/\[(.*?)\]\((.*?)\)/g, (_match, title: string, target: string) => {
+            const label = formatText(title);
+            const href = safeArticleLink(target);
+            const token = `${tokenPrefix}${links.length}\uE001`;
+            links.push(href === null ? label : `<a href="${escapeHtml(href)}" style="color:${linkAccent};text-decoration:underline;${type}">${label}</a>`);
+            return token;
+        });
+        let result = formatText(text);
+        links.forEach((link, index) => { result = result.split(`${tokenPrefix}${index}\uE001`).join(link); });
+        return result;
     };
     for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];

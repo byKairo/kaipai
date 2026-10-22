@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(endpoint, { headers: geminiOfficial ? { 'x-goog-api-key': apiKey } : anthropicOfficial ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' } : { Authorization: `Bearer ${apiKey}` }, signal: controller.signal, redirect: 'error', cache: 'no-store' });
+      const response = await fetch(endpoint, { headers: geminiOfficial ? { 'x-goog-api-key': apiKey } : anthropicOfficial ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' } : { Authorization: `Bearer ${apiKey}` }, signal: controller.signal, redirect: 'manual', cache: 'no-store' });
       if (!response.ok) return NextResponse.json({ ok: false, error: `当前连接的模型列表返回 ${response.status}` }, { status: 502 });
       const payload = await response.json();
       const data = geminiOfficial ? payload?.models : payload?.data;

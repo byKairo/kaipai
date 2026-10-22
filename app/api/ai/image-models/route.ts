@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 12000);
     let response: Response;
     try {
-      response = await fetch(url, { headers: provider === 'Gemini' ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` }, signal: controller.signal, redirect: 'error', cache: 'no-store' });
+      response = await fetch(url, { headers: provider === 'Gemini' ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` }, signal: controller.signal, redirect: 'manual', cache: 'no-store' });
     } finally { clearTimeout(timeout); }
     if (!response.ok) return NextResponse.json({ ok: false, error: `生图模型列表暂时不可用（${response.status}）` }, { status: 502 });
     const payload = await response.json();

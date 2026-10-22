@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 12000);
     let response: Response;
     try {
-      response = await fetch(url, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: controller.signal, cache: 'no-store', redirect: 'error' });
+      response = await fetch(url, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: controller.signal, cache: 'no-store', redirect: 'manual' });
     } finally { clearTimeout(timeout); }
     if (!response.ok) return NextResponse.json({ ok: false, error: `模型库暂时不可用（${response.status}）` }, { status: 502 });
     const payload = await response.json();

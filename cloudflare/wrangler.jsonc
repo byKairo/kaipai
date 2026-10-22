@@ -21,5 +21,6 @@
     "KAIPAI_DNS_RESOLVER": "records"
   },
   "account_id": "e88e7ed4e217c2f22dc3bd17fde8ee1d",
+  "observability": { "enabled": false, "logs": { "enabled": false }, "traces": { "enabled": false } },
   "workers_dev": true
 }

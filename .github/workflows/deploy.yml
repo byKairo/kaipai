@@ -29,6 +29,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Test and build
         run: npm run cf:ci
+      - name: Check public assets for credential material
+        run: node scripts/deployment-safety.cjs --artifacts
+      - name: Verify privacy with test-only credentials
+        run: node scripts/verify-security-http.cjs --cloudflare
       - name: Deploy to Cloudflare
         run: npm run cf:deploy
         env:

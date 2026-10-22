@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           ? { 'x-api-key': key, 'anthropic-version': '2023-06-01' }
           : { Authorization: `Bearer ${key}` },
         signal: controller.signal,
-        redirect: 'error',
+        redirect: 'manual',
         cache: 'no-store',
       });
     } finally { clearTimeout(timeout); }

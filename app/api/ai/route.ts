@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           { role: 'user', content: image ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: image, detail: 'high' } }] : prompt },
         ], ...(provider === 'Kimi' || (provider === 'OpenAI' && /^gpt-[56]/.test(model)) ? { max_completion_tokens: maxOutputTokens } : { max_tokens: maxOutputTokens }), ...(provider === 'Kimi' && model === 'kimi-k3' ? { reasoning_effort: 'low' } : {}), stream: false }),
         signal: controller.signal,
-        redirect: 'error',
+        redirect: 'manual',
         cache: 'no-store',
       });
       if (response.ok) raw = await response.json();

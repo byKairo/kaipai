@@ -2,7 +2,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { assertSafeDeploymentInputs } = require('./deployment-safety.cjs');
 const root = path.resolve(__dirname, '..');
+assertSafeDeploymentInputs(root);
 const target = path.join(root, '.cloudflare-deploy');
 fs.mkdirSync(target, { recursive: true });
 for (const name of ['app', 'lib', 'server', 'public']) {

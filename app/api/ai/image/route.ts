@@ -13,7 +13,7 @@ function imageError(status: number) { return `配图接口返回 ${status}，请
 async function imageUrlToDataUrl(src: string, signal: AbortSignal) {
   if (src.startsWith('data:image/')) return src;
   const url = await validateImageDownload(src);
-  const response = await fetch(url, { signal, redirect: 'error', cache: 'no-store' });
+  const response = await fetch(url, { signal, redirect: 'manual', cache: 'no-store' });
   if (!response.ok) throw new Error(`图片地址读取失败：${response.status}`);
   const contentType = response.headers.get('content-type') || 'image/png';
   if (!contentType.startsWith('image/')) throw new Error('图片地址没有返回图片内容');
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       const defaultBase = provider === 'Custom' ? '' : AI_PROVIDER_DEFAULTS[provider].endpoint.replace(/\/chat\/completions$/, '');
       if (adapter !== 'gemini-native') {
         const endpoint = adapter === 'antigravity-gemini-image-chat' ? await capabilityEndpoint(baseUrl || defaultBase, 'chat/completions') : provider === 'OpenRouter' && (!baseUrl || baseUrl === defaultBase) ? 'https://openrouter.ai/api/v1/images' : provider !== 'Custom' && (!baseUrl || baseUrl === defaultBase) ? AI_PROVIDER_DEFAULTS[provider].endpoint.replace(/chat\/completions$/, 'images/generations') : await capabilityEndpoint(baseUrl, 'images/generations');
-        response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(adapter === 'antigravity-gemini-image-chat' ? { model, messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'], ...(nativeRatio ? { image_config: { aspect_ratio: nativeRatio } } : {}), stream: false } : { model, prompt, n: 1, ...(aspectRatio ? /^dall-e-3/.test(model) ? { size: aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '9:16' ? '1024x1792' : '1792x1024' } : /^gpt-image/.test(model) ? { size } : { aspect_ratio: nativeRatio } : {}) }), signal: controller.signal, redirect: 'error', cache: 'no-store' });
+        response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(adapter === 'antigravity-gemini-image-chat' ? { model, messages: [{ role: 'user', content: prompt }], modalities: ['image', 'text'], ...(nativeRatio ? { image_config: { aspect_ratio: nativeRatio } } : {}), stream: false } : { model, prompt, n: 1, ...(aspectRatio ? /^dall-e-3/.test(model) ? { size: aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '9:16' ? '1024x1792' : '1792x1024' } : /^gpt-image/.test(model) ? { size } : { aspect_ratio: nativeRatio } : {}) }), signal: controller.signal, redirect: 'manual', cache: 'no-store' });
         if (!response.ok) {
           return NextResponse.json({ ok: false, error: imageError(response.status) }, { status: 502 });
         }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       }
       if (baseUrl !== 'https://generativelanguage.googleapis.com/v1beta/openai') return NextResponse.json({ ok: false, error: 'Gemini 官方原生接口只能搭配 Gemini 官方 API 地址和 Key；本地代理请选 Gemini Image（聊天接口）' }, { status: 400 });
       if (!/^[a-zA-Z0-9_.-]+$/.test(model)) return NextResponse.json({ ok: false, error: 'Gemini 模型 ID 格式不正确' }, { status: 400 });
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(nativeRatio ? { imageConfig: { aspectRatio: nativeRatio } } : {}) } }), signal: controller.signal, redirect: 'error', cache: 'no-store' });
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(nativeRatio ? { imageConfig: { aspectRatio: nativeRatio } } : {}) } }), signal: controller.signal, redirect: 'manual', cache: 'no-store' });
       if (!response.ok) {
         return NextResponse.json({ ok: false, error: imageError(response.status) }, { status: 502 });
       }

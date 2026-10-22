@@ -11,6 +11,6 @@ const nextConfig = {
       { key: 'Content-Security-Policy', value: "base-uri 'self'; object-src 'none'; frame-ancestors 'self'" },
     ] }];
   },
-  experimental: { outputFileTracingIncludes: { '/api/ai': ['./server/skills/**/*'], '/api/ai/image': ['./server/skills/**/*'], '/api/ai/design': ['./server/skills/**/*'] } },
+  outputFileTracingIncludes: { '/api/ai': ['./server/skills/**/*'], '/api/ai/image': ['./server/skills/**/*'], '/api/ai/design': ['./server/skills/**/*'] },
 };
 export default nextConfig;

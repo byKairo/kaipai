@@ -12,7 +12,7 @@ for (const name of ['app', 'lib', 'server', 'public']) {
   fs.cpSync(path.join(root, name), path.join(target, name), { recursive: true });
 }
 for (const name of ['next.config.mjs', 'next-env.d.ts', 'tsconfig.json']) fs.copyFileSync(path.join(root, name), path.join(target, name));
-for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
+for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc', 'worker.ts']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
 if (fs.existsSync(path.join(root, 'cloudflare/package-lock.json'))) fs.copyFileSync(path.join(root, 'cloudflare/package-lock.json'), path.join(target, 'package-lock.json'));
 const manifest = JSON.parse(fs.readFileSync(path.join(target, 'server/skills/manifest.json'), 'utf8'));
 const resources = {};

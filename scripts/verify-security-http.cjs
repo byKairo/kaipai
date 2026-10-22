@@ -87,6 +87,18 @@ async function main() {
       assert.ok(!(await response.text()).includes(dummy));
     }
     assert.equal(redirected, false, 'credentials never forwarded to redirect target');
+    if (cloudflare) {
+      let limited;
+      for (let i = 0; i < 125; i++) {
+        const response = await fetch(root + '/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: root, 'CF-Connecting-IP': '198.51.100.77' }, body: '{}', signal: AbortSignal.timeout(5000) });
+        if (response.status === 429) { limited = response; break; }
+        assert.equal(response.status, 400, 'invalid request never calls a provider');
+      }
+      assert.ok(limited, 'Cloudflare native binding blocks excessive requests');
+      assert.equal(limited.headers.get('retry-after'), '60');
+      assert.equal((await fetch(root)).status, 200, 'API limit does not block page');
+      console.log('PASS: native Cloudflare rate limit returns 429 without model calls');
+    }
     console.log('PASS: production headers, saved credentials, no-store, cross-site rejection, redacted upstream errors redirect containment, complete streaming and rejected truncated output');
   } finally {
     app.kill('SIGTERM');

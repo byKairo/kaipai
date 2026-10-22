@@ -126,3 +126,9 @@ Workers 不支持 `node:dns` 的 `lookup`。部署到 Workers 时设置 `KAIPAI_
 所有模型及图片下载请求使用 manual 重定向并拒绝非成功状态，避免 Cloudflare 不支持 redirect:error 导致接口故障，也避免向跳转地址转发凭据。scripts/verify-security-http.cjs 使用随机虚拟 Key、本地模拟供应商，核对旧凭据使用、错误脱敏、跨站拒绝、不缓存响应和重定向拒绝。支持 --cloudflare，并在 CI 部署前运行；不调用付费模型，不接触用户文章。
 
 发布账号的双重认证由本人配置并保管恢复码。部署令牌应限定为单个 kaipai Worker 的 Editor，验证新令牌部署成功后再撤销旧令牌；创建审核页不代表令牌已经生效。
+
+### API 限流与依赖维护（2026-10-22）
+
+Cloudflare 部署通过 cloudflare/worker.ts 在应用前对 AI 与凭据 POST 接口执行原生限流：每个 Cloudflare 客户端 IP、每个边缘位置约 120 次/分钟，共享一个计数桶。普通页面与静态资源不计入；平台限流服务异常时放行。此措施不等同于登录、严格费用额度或凭据撤销；共享网络、分布式请求和本地 Next 运行的边界见 docs/security/2026-10-22-api-dependencies.md。计数键使用按日变化的地址摘要，不保存文章或 API Key。
+
+依赖补丁已同步根目录与 cloudflare 锁文件；剩余无官方修复版本的构建/CLI 间接依赖告警及适用范围记录在上述文件。不能把 npm audit 未清零等同于已确认公网可利用，也不能把当前未发现调用路径等同于永远安全。

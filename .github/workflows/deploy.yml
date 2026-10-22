@@ -36,5 +36,5 @@ jobs:
       - name: Deploy to Cloudflare
         run: npm run cf:deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_WORKER_ONLY }}
           CLOUDFLARE_ACCOUNT_ID: e88e7ed4e217c2f22dc3bd17fde8ee1d

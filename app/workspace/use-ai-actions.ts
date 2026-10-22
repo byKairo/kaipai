@@ -207,8 +207,7 @@ export function useAiActions(context: Context) {
     }
     const original = editor.state.doc.textBetween(from, to, '\n').trim();
     if (!original) { say('请先写入文章标题或选中正文'); return; }
-    const coords = editor.view.coordsAtPos(from);
-    const revision: AiRevision = { kind: tool, original, proposal: '', alternatives: [], from, to, wasHeading, insertAtStart, top: Math.max(12, Math.min(coords.bottom + 8, window.innerHeight - 390)), left: Math.max(12, Math.min(coords.left, window.innerWidth - 390)), status: 'running' };
+    const revision: AiRevision = { kind: tool, original, proposal: '', alternatives: [], from, to, wasHeading, insertAtStart, status: 'running' };
     setRevisionInstruction('');
     await makeRevision(revision);
   };

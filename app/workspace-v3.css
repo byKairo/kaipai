@@ -344,6 +344,12 @@
 #kaipai-studio .api-settings-header p { margin:0; color:#655d50; font-size:13px; font-weight:700; }
 #kaipai-studio .api-settings-close { position:absolute; top:14px; right:17px; width:34px; height:34px; border:2px solid #1b1b1b; border-radius:8px; background:#fff; font-size:24px; line-height:1; cursor:pointer; }
 #kaipai-studio .api-settings-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:19px 24px 22px; }
+#kaipai-studio .api-form-field select { box-sizing:border-box; width:100%; min-height:44px; margin-top:6px; padding:9px 11px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; color:#171717; font-size:13px; }
+#kaipai-studio .api-quick-models { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:18px; }
+#kaipai-studio .api-discover { padding:9px 16px; border:2px solid #1b1b1b; border-radius:7px; background:#dff6fa; font-size:13px; font-weight:800; cursor:pointer; }
+#kaipai-studio .api-quick-check { display:flex; align-items:flex-start; gap:8px; margin:8px 0 18px; font-size:12px; line-height:1.5; color:#514f49; }
+#kaipai-studio .api-quick-check input { flex:none; margin-top:3px; }
+#kaipai-studio .api-advanced-toggle { display:block; margin:14px 0; padding:5px 0; border:0; background:transparent; color:#615f5b; font-size:12px; text-decoration:underline; cursor:pointer; }
 #kaipai-studio .api-profile-manager { margin-bottom:22px; padding:14px; border:2px solid #1b1b1b; border-radius:10px; background:#eef9fb; }
 #kaipai-studio .api-profile-list { display:grid; gap:7px; margin:10px 0; }
 #kaipai-studio .api-profile-item { display:flex; align-items:center; gap:7px; min-width:0; padding:8px; border:1.5px solid #1b1b1b; border-radius:7px; background:#fff; }
@@ -457,6 +463,7 @@
 #kaipai-studio .api-settings-actions { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:center; gap:9px; flex:none; margin:0; padding:14px 20px; border-top:3px solid #1b1b1b; background:#fffefb; }
 #kaipai-studio .api-settings-actions button { min-height:43px; padding:8px 12px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; box-shadow:3px 3px 0 #1b1b1b; font-size:13px; font-weight:900; cursor:pointer; }
 #kaipai-studio .api-settings-actions .api-save { background:#65dba1; }
+#kaipai-studio .api-settings-actions.api-quick-actions { grid-template-columns:minmax(0,1fr) auto; }
 #kaipai-studio .api-settings-actions .api-test { background:#60cde1; }
 #kaipai-studio .api-settings-actions .api-reset { background:#ffda56; }
 #kaipai-studio .api-settings-actions button:disabled { opacity:.55; cursor:wait; }
@@ -491,24 +498,25 @@
 #kaipai-studio #aiImageHistory button { align-items:center; gap:7px; width:100%; background:#fff; text-align:left; }
 #kaipai-studio #aiImageHistory img { width:38px; height:30px; object-fit:cover; }
 #kaipai-studio #aiImageHistory span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#kaipai-studio .ai-revision-popover { position:fixed; z-index:120; width:min(370px,calc(100vw - 24px)); max-height:min(540px,calc(100dvh - 24px)); overflow:auto; padding:12px; border:3px solid #1b1b1b; border-radius:10px; background:#fffdf5; box-shadow:5px 5px 0 #1b1b1b; }
-#kaipai-studio .ai-revision-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
-#kaipai-studio .ai-revision-head b { font-size:15px; }
-#kaipai-studio .ai-revision-head button { border:1.5px solid #1b1b1b; border-radius:5px; background:#fff; font-size:18px; }
-#kaipai-studio .ai-revision-compare { display:grid; gap:8px; }
-#kaipai-studio .ai-revision-compare>div { min-width:0; padding:8px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; }
-#kaipai-studio .ai-revision-compare>div:last-child { background:#edfff7; }
-#kaipai-studio .ai-revision-compare small { display:block; margin-bottom:4px; font-weight:900; }
-#kaipai-studio .ai-revision-compare p { margin:0; max-height:90px; overflow:auto; font-size:11px; line-height:1.5; white-space:pre-wrap; }
-#kaipai-studio .ai-revision-compare textarea { box-sizing:border-box; width:100%; min-height:70px; border:0; outline:0; resize:vertical; background:transparent; font-size:11px; line-height:1.5; }
-#kaipai-studio .ai-revision-alternatives { display:grid; gap:5px; margin-top:8px; }
-#kaipai-studio .ai-revision-alternatives button { padding:6px; border:1px solid #1b1b1b; border-radius:5px; background:#fff; font-size:10px; text-align:left; }
-#kaipai-studio .ai-revision-instruction { display:block; margin-top:10px; font-size:10px; font-weight:850; }
-#kaipai-studio .ai-revision-instruction input { box-sizing:border-box; display:block; width:100%; margin-top:4px; padding:7px; border:1.5px solid #1b1b1b; border-radius:6px; font-size:11px; }
-#kaipai-studio .ai-revision-error { margin:7px 0; color:#a52937; font-size:10px; }
-#kaipai-studio .ai-revision-actions { display:flex; justify-content:flex-end; gap:7px; margin-top:9px; }
-#kaipai-studio .ai-revision-actions button { padding:7px 10px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; font-size:11px; font-weight:850; }
-#kaipai-studio .ai-revision-actions button:last-child { background:#65dba1; }
+.kaipai-revision-layer { position:fixed; inset:0; z-index:220; display:flex; align-items:center; justify-content:center; box-sizing:border-box; padding:16px; background:rgba(0,0,0,.24); color:#171717; font-family:system-ui,sans-serif; }
+.kaipai-revision-layer .ai-revision-popover { box-sizing:border-box; position:relative; width:min(640px,100%); min-width:0; max-height:calc(100dvh - 32px); overflow:auto; padding:18px; border:3px solid #1b1b1b; border-radius:10px; background:#fffdf5; box-shadow:5px 5px 0 #1b1b1b; }
+.kaipai-revision-layer .ai-revision-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+.kaipai-revision-layer .ai-revision-head b { font-size:17px; }
+.kaipai-revision-layer .ai-revision-head button { border:1.5px solid #1b1b1b; border-radius:5px; background:#fff; font-size:18px; }
+.kaipai-revision-layer .ai-revision-compare { display:grid; gap:8px; }
+.kaipai-revision-layer .ai-revision-compare>div { min-width:0; padding:8px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; }
+.kaipai-revision-layer .ai-revision-compare>div:last-child { background:#edfff7; }
+.kaipai-revision-layer .ai-revision-compare small { display:block; margin-bottom:4px; font-weight:900; }
+.kaipai-revision-layer .ai-revision-compare p { margin:0; max-height:90px; overflow:auto; font-size:11px; line-height:1.5; white-space:pre-wrap; }
+.kaipai-revision-layer .ai-revision-compare textarea { box-sizing:border-box; width:100%; min-height:100px; border:0; outline:0; resize:vertical; background:transparent; font-size:14px; line-height:1.5; }
+.kaipai-revision-layer .ai-revision-alternatives { display:grid; gap:5px; margin-top:8px; }
+.kaipai-revision-layer .ai-revision-alternatives button { overflow-wrap:anywhere; white-space:normal; padding:9px; border:1px solid #1b1b1b; border-radius:5px; background:#fff; font-size:10px; text-align:left; }
+.kaipai-revision-layer .ai-revision-instruction { display:block; margin-top:10px; font-size:10px; font-weight:850; }
+.kaipai-revision-layer .ai-revision-instruction input { box-sizing:border-box; display:block; width:100%; margin-top:4px; padding:7px; border:1.5px solid #1b1b1b; border-radius:6px; font-size:11px; }
+.kaipai-revision-layer .ai-revision-error { margin:7px 0; color:#a52937; font-size:10px; }
+.kaipai-revision-layer .ai-revision-actions { display:flex; justify-content:flex-end; gap:7px; margin-top:9px; }
+.kaipai-revision-layer .ai-revision-actions button { padding:7px 10px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; font-size:11px; font-weight:850; }
+.kaipai-revision-layer .ai-revision-actions button:last-child { background:#65dba1; }
 
 @media (max-width: 1180px) and (min-width: 900px) {
   #kaipai-studio .v091-workspace { grid-template-columns: 252px minmax(290px, 1fr) minmax(290px, .95fr) !important; gap: 11px !important; padding: 15px !important; }

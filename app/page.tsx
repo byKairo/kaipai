@@ -15,6 +15,7 @@ import { isImageTargetCurrent } from '../lib/ai-workbench';
 import { useAiActions } from './workspace/use-ai-actions';
 import { useArticleReview } from './workspace/use-article-review';
 import { ArticleReviewPopover } from './workspace/article-review-popover';
+import { AiRevisionDialog } from './workspace/ai-revision-dialog';
 import reviewUi from './workspace/article-review.module.css';
 import type { AiProviderId } from '../lib/providers';
 import { sample } from './workspace/sample-article';
@@ -1070,14 +1071,14 @@ export default function Page() {
         <input ref={imageInputRef} className="v091-hidden-input" type="file" accept="image/*" onChange={insertImage} />
         <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={activeArticleId || 'initial'} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onReviewState={articleReview.setReview} /></div>
         <ArticleReviewPopover editor={richEditorRef.current} item={articleReview.active} onAdopt={articleReview.adopt} onIgnore={articleReview.dismiss} onClose={() => articleReview.select(null)} />
-        {aiRevision && <div className="ai-revision-popover" role="dialog" aria-label={aiRevision.kind === 'title' ? '标题建议对照' : '润色对照'} style={{ top: aiRevision.top, left: aiRevision.left }}>
+        {aiRevision && <AiRevisionDialog label={aiRevision.kind === 'title' ? '标题建议对照' : '润色对照'} onClose={() => { requestScope.cancel('revision'); setAiRevision(null); }}>
           <div className="ai-revision-head"><b>{aiRevision.kind === 'title' ? '标题建议' : '润色批改'}</b><button type="button" onClick={() => { requestScope.cancel('revision'); setAiRevision(null); }} aria-label="关闭批改框">×</button></div>
           <div className="ai-revision-compare"><div><small>原文</small><p>{aiRevision.original}</p></div><div><small>建议版本</small><textarea value={aiRevision.proposal} onChange={(event) => setAiRevision((current) => current ? { ...current, proposal: event.target.value } : current)} placeholder={aiRevision.status === 'running' ? '正在生成建议…' : '这里可以直接修改建议'} /></div></div>
           {aiRevision.alternatives.length > 0 && <div className="ai-revision-alternatives">{aiRevision.alternatives.map((title, index) => <button type="button" key={`${index}-${title}`} onClick={() => setAiRevision((current) => current ? { ...current, proposal: title } : current)}>{index + 1}. {title}</button>)}</div>}
           <label className="ai-revision-instruction">继续优化<input value={revisionInstruction} onChange={(event) => setRevisionInstruction(event.target.value)} placeholder="例如：更简洁、保留某个细节" /></label>
           {aiRevision.error && <p className="ai-revision-error">{aiRevision.error}</p>}
           <div className="ai-revision-actions"><button type="button" onClick={() => void makeRevision(aiRevision, revisionInstruction)} disabled={aiRevision.status === 'running'}>重新生成</button><button type="button" onClick={applyRevision} disabled={!aiRevision.proposal.trim() || aiRevision.status === 'running'}>应用到文章</button></div>
-        </div>}
+        </AiRevisionDialog>}
         <textarea className="v091-legacy-source" ref={editorRef} aria-label="Markdown 源文稿" value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); } }} tabIndex={-1} />
       </section>
       <ArticlePreview styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}

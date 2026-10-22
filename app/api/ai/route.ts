@@ -5,6 +5,7 @@ import { readPrivateRequest, privateJson } from '../../../lib/server/request';
 const NextResponse = { json: (body: unknown, init?: { status?: number }) => privateJson(body, init?.status) };
 import { AI_PROVIDER_DEFAULTS, type AiProviderId } from '../../../lib/providers';
 import { capabilityEndpoint, apiConnectionFailure } from '../../../lib/server-endpoint';
+import { readChatResponse, upstreamFailureCategory, UpstreamChatStreamError } from '../../../lib/server/chat-response';
 
 export const runtime = 'nodejs';
 
@@ -14,13 +15,19 @@ function upstreamError(status: number, provider: AiProviderId) {
   if (status === 403) return `${name} 拒绝访问（403）。请检查账户是否有该模型的使用权限。`;
   if (status === 404) return `${name} 未找到模型或接口（404）。请核对模型 ID；若是自定义接口，还要检查 API 地址。`;
   if (status === 429) return `${name} 请求受限（429）。请检查速率限制或账户余额，稍后再试。`;
+  if ([408, 504, 524].includes(status)) return `${name} 接口等待模型响应超时（${status}），请稍后重试。`;
   if (status === 400 || status === 422) return `${name} 无法接受当前请求（${status}）。请核对模型 ID 与该模型支持的参数。`;
   return `${name} 服务返回 ${status}，请稍后重试。`;
 }
 
 export async function POST(request: NextRequest) {
+  let phase = 'request';
+  let operationLabel = '文本请求';
   try {
     const body = await readPrivateRequest(request, 17000000);
+    if (body.operation === 'design-compose') operationLabel = '封面构思';
+    else if (body.operation === 'design-review') operationLabel = '看图审核';
+    else if (body.operation === 'design-recommend') operationLabel = '风格推荐';
     const reviewingImage = body.operation === 'design-review' && body.action !== 'test';
     if (!reviewingImage && JSON.stringify(body).length > 240000) return NextResponse.json({ ok: false, error: '请求内容过长' }, { status: 413 });
     const provider = body?.provider as AiProviderId;
@@ -29,12 +36,15 @@ export async function POST(request: NextRequest) {
     if (!model || model.length > 120) return NextResponse.json({ ok: false, error: '请填写模型名称' }, { status: 400 });
     const action = body.action === 'test' ? 'test' : 'plan';
     const adapter = body.adapter === 'openai-responses' ? 'openai-responses' : 'openai-chat';
+    const streaming = adapter === 'openai-chat' && action !== 'test' && process.env.KAIPAI_AI_STREAM === '1';
     const rawEndpoint = typeof body.endpoint === 'string' ? body.endpoint.trim() : '';
     const defaultBase = provider === 'Custom' ? '' : AI_PROVIDER_DEFAULTS[provider].endpoint.replace(/\/chat\/completions$/, '');
+    phase = 'endpoint';
     const chatEndpoint = provider === 'Custom' ? await capabilityEndpoint(rawEndpoint, 'chat/completions') : !rawEndpoint || rawEndpoint === defaultBase ? AI_PROVIDER_DEFAULTS[provider].endpoint : provider === 'Kimi' && rawEndpoint === 'https://api.moonshot.ai/v1' ? 'https://api.moonshot.ai/v1/chat/completions' : await capabilityEndpoint(rawEndpoint, 'chat/completions');
     const endpoint = adapter === 'openai-responses' ? chatEndpoint.replace(/\/chat\/completions$/, '/responses') : chatEndpoint;
     const key = resolveCredential(body.apiKey, { provider, baseUrl: rawEndpoint || defaultBase });
     if (!key) return NextResponse.json({ ok: false, error: '请填写有效的 API Key' }, { status: 400 });
+    phase = 'skill';
     const workflow = action !== 'test' && body.operation !== undefined ? buildSkillPlan(body) : null;
     const prompt = action === 'test' ? '只回复：连接成功' : workflow?.prompt || String(body.prompt || '');
     if (!workflow && prompt.length > 40000) return NextResponse.json({ ok: false, error: '请求内容过长' }, { status: 413 });
@@ -44,37 +54,60 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     request.signal.addEventListener('abort', () => controller.abort(), { once: true });
     if (request.signal.aborted) controller.abort();
-    const timeout = setTimeout(() => controller.abort(), action === 'plan' ? 90000 : /^(gpt-[56]|claude-fable|kimi-k3)/.test(model) ? 45000 : 25000);
+    const timeout = setTimeout(() => controller.abort(), reviewingImage ? 180000 : action === 'plan' ? 90000 : /^(gpt-[56]|claude-fable|kimi-k3)/.test(model) ? 45000 : 25000);
     let response: Response;
+    let chatText: string | undefined;
+    let category = 'unknown';
+    const started = Date.now();
     let raw = {} as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }>; choices?: Array<{ message?: { content?: string } }> };
     try {
       const maxOutputTokens = action === 'test' ? 384 : 10000;
+      phase = 'upstream';
       response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify(adapter === 'openai-responses' ? { model, instructions: system, input: image ? [{ role: 'user', content: [{ type: 'input_text', text: prompt }, { type: 'input_image', image_url: image }] }] : prompt, max_output_tokens: maxOutputTokens, stream: false } : { model, messages: [
           { role: provider === 'OpenAI' && /^gpt-[56]/.test(model) ? 'developer' : 'system', content: system },
           { role: 'user', content: image ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: image, detail: 'high' } }] : prompt },
-        ], ...(provider === 'Kimi' || (provider === 'OpenAI' && /^gpt-[56]/.test(model)) ? { max_completion_tokens: maxOutputTokens } : { max_tokens: maxOutputTokens }), ...(provider === 'Kimi' && model === 'kimi-k3' ? { reasoning_effort: 'low' } : {}), stream: false }),
+        ], ...(provider === 'Kimi' || (provider === 'OpenAI' && /^gpt-[56]/.test(model)) ? { max_completion_tokens: maxOutputTokens } : { max_tokens: maxOutputTokens }), ...(provider === 'Kimi' && model === 'kimi-k3' ? { reasoning_effort: 'low' } : {}), stream: streaming }),
         signal: controller.signal,
         redirect: 'manual',
         cache: 'no-store',
       });
-      if (response.ok) raw = await response.json();
+      phase = 'response-json';
+      if (response.ok) {
+        try { if (adapter === 'openai-chat') chatText = await readChatResponse(response); else raw = await response.json(); }
+        catch (error) {
+          if (controller.signal.aborted) throw error;
+          if (error instanceof UpstreamChatStreamError) {
+            console.warn('AI stream failure', { operation: operationLabel, category: error.category, streaming, elapsedMs: Date.now() - started });
+            return NextResponse.json({ ok: false, error: `${operationLabel}未完成：模型服务在流式回复中返回错误，请稍后重试` }, { status: 502 });
+          }
+          if (error instanceof Error && ['IncompleteChatStream', 'ChatOutputLimit', 'ChatContentFiltered'].includes(error.message)) {
+            return NextResponse.json({ ok: false, error: `${operationLabel}未完成：模型回复中断或被截断，未应用不完整结果，请重试` }, { status: 502 });
+          }
+          return NextResponse.json({ ok: false, error: '模型接口未返回有效 JSON，可能返回了网关错误页面，请稍后重试或检查接口兼容性' }, { status: 502 });
+        }
+      }
+      else category = await upstreamFailureCategory(response);
     } finally { clearTimeout(timeout); }
     if (!response.ok) {
-      return NextResponse.json({ ok: false, error: `${reviewingImage ? '看图审核未完成，请确认模型支持图片输入。' : ''}${upstreamError(response.status, provider)}` }, { status: 502 });
+      console.warn('AI upstream failure', { operation: operationLabel, status: response.status, category, streaming, elapsedMs: Date.now() - started });
+      return NextResponse.json({ ok: false, error: `${reviewingImage ? [400, 422].includes(response.status) ? '看图审核未完成，请确认模型支持图片输入。' : '看图审核未完成，原图已保留。' : ''}${upstreamError(response.status, provider)}` }, { status: 502 });
     }
-    const text = adapter === 'openai-responses' ? raw?.output_text || raw?.output?.flatMap((item: { content?: Array<{ text?: string }> }) => item.content || []).map((item: { text?: string }) => item.text || '').join('') : raw?.choices?.[0]?.message?.content;
+    const text = adapter === 'openai-responses' ? raw?.output_text || raw?.output?.flatMap((item: { content?: Array<{ text?: string }> }) => item.content || []).map((item: { text?: string }) => item.text || '').join('') : chatText;
     if (typeof text !== 'string' || !text.trim()) return NextResponse.json({ ok: false, error: '服务未返回可用内容' }, { status: 502 });
     let review;
     if (reviewingImage) {
       try { review = finishCoverReview(text, body); }
       catch { return NextResponse.json({ ok: false, error: '看图模型没有返回完整审核记录；图片未获通过，可重试审核或更换看图模型' }, { status: 502 }); }
     }
+    console.info('AI request completed', { operation: operationLabel, streaming, elapsedMs: Date.now() - started });
     return NextResponse.json({ ok: true, text, model, review, skills: workflow?.skills || [] });
   } catch (error) {
-    const failure = apiConnectionFailure(error, '文本请求');
+    // No request data, credentials, provider body or raw exception text in logs.
+    console.error('AI request failed', { phase, errorType: error instanceof Error ? error.name : 'unknown' });
+    const failure = apiConnectionFailure(error, operationLabel);
     return NextResponse.json({ ok: false, error: failure.error }, { status: failure.status });
   }
 }

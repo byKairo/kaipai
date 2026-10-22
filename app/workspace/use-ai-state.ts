@@ -4,7 +4,7 @@ import type { ImageTarget } from '../../lib/ai-workbench';
 import type { GeneratedImage } from '../../lib/generated-images';
 import { useMemo, useReducer, type SetStateAction } from 'react';
 export type AiImageCard = { id: string; brief: string; prompt: string; src: string; ratio?: string; target?: ImageTarget; visualStyle?: string; imageText?: string; status: 'idle' | 'loading' | 'done' | 'error'; error?: string };
-export type AiRevision = { kind: 'polish' | 'title'; original: string; proposal: string; alternatives: string[]; from: number; to: number; wasHeading: boolean; insertAtStart?: boolean; top: number; left: number; status: 'running' | 'ready' | 'error'; error?: string };
+export type AiRevision = { kind: 'polish' | 'title'; original: string; proposal: string; alternatives: string[]; from: number; to: number; wasHeading: boolean; insertAtStart?: boolean; status: 'running' | 'ready' | 'error'; error?: string };
 
 export function useAiState() {
   const [state, updateAction] = useReducer((current: typeof initial, action: StateUpdate) => {

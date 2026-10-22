@@ -7,12 +7,24 @@ async function main() {
   const dummy = 'test-only-' + randomBytes(16).toString('hex');
   let redirected = false;
   let redirectMode = false;
+  let streamMode = '';
   const mock = http.createServer((req, res) => {
     if (req.url === '/stolen') redirected = true;
     assert.equal(req.headers.authorization, `Bearer ${dummy}`);
     res.setHeader('Content-Type', 'application/json');
     if (redirectMode) { res.writeHead(302, { Location: '/stolen' }); return res.end(JSON.stringify({ error: dummy })); }
     if (req.url.endsWith('/models')) return res.end(JSON.stringify({ data: [{ id: 'test-model' }] }));
+    if (streamMode) {
+      let body = ''; req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        assert.equal(JSON.parse(body).stream, true);
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: '测试完整回复' }, finish_reason: null }] }) + '\n\n');
+        if (streamMode === 'complete') res.write('data: ' + JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] }) + '\n\ndata: [DONE]\n\n');
+        res.end();
+      });
+      return;
+    }
     res.statusCode = 500;
     res.end(JSON.stringify({ error: { message: dummy } }));
   });
@@ -28,7 +40,7 @@ async function main() {
   const args = cloudflare
     ? ['.cloudflare-deploy/node_modules/wrangler/bin/wrangler.js', 'dev', '--config', '.cloudflare-deploy/dist/server/wrangler.json', '--ip', '127.0.0.1', '--port', String(port), '--var', 'KAIPAI_ALLOW_LOOPBACK_API:1', '--var', `KAIPAI_CREDENTIAL_KEYS:${ring}`]
     : ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', String(port)];
-  const app = spawn(process.execPath, args, { env: { ...process.env, KAIPAI_ALLOW_LOOPBACK_API: '1', KAIPAI_CREDENTIAL_KEYS: ring, WRANGLER_SEND_METRICS: 'false' }, stdio: 'ignore' });
+  const app = spawn(process.execPath, args, { env: { ...process.env, KAIPAI_ALLOW_LOOPBACK_API: '1', KAIPAI_AI_STREAM: '1', KAIPAI_CREDENTIAL_KEYS: ring, WRANGLER_SEND_METRICS: 'false' }, stdio: 'ignore' });
   try {
     let ready = false;
     for (let i = 0; i < 80; i++) {
@@ -59,6 +71,15 @@ async function main() {
     const failed = await send('/api/ai', { ...saved, endpoint: baseUrl, model: 'test-model', action: 'test' });
     assert.equal(failed.status, 502);
     assert.ok(!(await failed.text()).includes(dummy), 'upstream error does not echo key');
+    streamMode = 'complete';
+    const streamed = await send('/api/ai', { ...saved, endpoint: baseUrl, model: 'test-model', action: 'plan', prompt: 'test' });
+    assert.equal(streamed.status, 200);
+    assert.equal((await streamed.json()).text, '测试完整回复');
+    streamMode = 'truncated';
+    const truncated = await send('/api/ai', { ...saved, endpoint: baseUrl, model: 'test-model', action: 'plan', prompt: 'test' });
+    assert.equal(truncated.status, 502);
+    assert.ok(!(await truncated.text()).includes('测试完整回复'), 'incomplete output never applied');
+    streamMode = '';
     redirectMode = true;
     for (const route of ['/api/ai/connection-models', '/api/ai/image-models', '/api/ai', '/api/ai/image']) {
       const response = await send(route, { ...saved, endpoint: baseUrl, model: 'test-model', action: 'test', adapter: 'openai-images', prompt: 'test' });
@@ -66,7 +87,7 @@ async function main() {
       assert.ok(!(await response.text()).includes(dummy));
     }
     assert.equal(redirected, false, 'credentials never forwarded to redirect target');
-    console.log('PASS: production headers, saved credentials, no-store, cross-site rejection, redacted upstream errors and redirect containment');
+    console.log('PASS: production headers, saved credentials, no-store, cross-site rejection, redacted upstream errors redirect containment, complete streaming and rejected truncated output');
   } finally {
     app.kill('SIGTERM');
     await new Promise(resolve => mock.close(resolve));

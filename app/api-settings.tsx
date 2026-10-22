@@ -5,6 +5,7 @@ import { isSealedCredential } from '../lib/credential-format';
 import { useEffect, useRef, useState } from 'react';
 import { AI_PROVIDER_DEFAULTS, requestAi, type AiProviderId } from '../lib/providers';
 import { defaultImageAdapter, type ApiProfile, type ApiProfileRoles } from '../lib/api-profiles';
+import { identifyApiAddress, recommendModels, modelKind } from '../lib/api-setup';
 
 export type ApiSettingsValue = { provider: '本地模拟' | AiProviderId; apiKey: string; model: string; endpoint: string };
 type CatalogModel = { id: string; name: string; description: string; context: number; free: boolean };
@@ -42,16 +43,24 @@ function RolePicker({ label, value, choices, onSelect }: { label: string; value:
 }
 
 export default function ApiSettings({ profiles, roles, onClose, onChange: commitChange }: { profiles: ApiProfile[]; roles: ApiProfileRoles; onClose: () => void; onChange: (profiles: ApiProfile[], roles: ApiProfileRoles) => void }) {
-  const [value, setValue] = useState<ApiSettingsValue>({ provider: '本地模拟', apiKey: '', model: '', endpoint: '' });
-  const [editingId, setEditingId] = useState('');
-  const [profileName, setProfileName] = useState('');
-  const [imageModel, setImageModel] = useState('');
-  const [textAdapter, setTextAdapter] = useState<ApiProfile['adapters']['text'] | ''>('');
-  const [imageAdapter, setImageAdapter] = useState<ApiProfile['adapters']['image'] | ''>('');
-  const [workspaceId, setWorkspaceId] = useState('');
+  const initial = profiles.find(profile => profile.id === roles.textId) || profiles[0];
+  const [value, setValue] = useState<ApiSettingsValue>({ provider: initial?.provider || 'Custom', apiKey: initial?.apiKey || '', model: initial?.models.text || '', endpoint: initial?.baseUrl || '' });
+  const [editingId, setEditingId] = useState(initial?.id || '');
+  const [profileName, setProfileName] = useState(initial?.name || '');
+  const [imageModel, setImageModel] = useState(initial?.models.image || '');
+  const [textAdapter, setTextAdapter] = useState<ApiProfile['adapters']['text'] | ''>(initial?.adapters.text || '');
+  const [imageAdapter, setImageAdapter] = useState<ApiProfile['adapters']['image'] | ''>(initial?.adapters.image || '');
+  const [advanced, setAdvanced] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [verifyImage, setVerifyImage] = useState(true);
+  const alive = useRef(true);
+  const setupJob = useRef<AbortController | null>(null);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; setupJob.current?.abort(); }; }, []);
+  const [workspaceId, setWorkspaceId] = useState(initial?.workspaceId || '');
   const [keyVisible, setKeyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const verifySaveRef = useRef(false);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const onChange = (next: ApiProfile[], nextRoles: ApiProfileRoles) => { try { commitChange(next, nextRoles); return true; } catch (error) { setResult({ ok: false, text: error instanceof Error ? error.message : '配置保存失败' }); return false; } };
@@ -177,6 +186,31 @@ export default function ApiSettings({ profiles, roles, onClose, onChange: commit
     setPickerOpen(false);
     setImagePickerOpen(false);
   };
+  const loadProfile = (id: string) => {
+    const profile = profiles.find(item => item.id === id);
+    setEditingId(profile?.id || ''); setProfileName(profile?.name || ''); setImageModel(profile?.models.image || '');
+    setTextAdapter(profile?.adapters.text || ''); setImageAdapter(profile?.adapters.image || '');
+    setValue({ provider: profile?.provider || 'Custom', endpoint: profile?.baseUrl || '', apiKey: profile?.apiKey || '', model: profile?.models.text || '' });
+    setWorkspaceId(profile?.workspaceId || '');
+    setConnectionModels([]); setResult(null); setKeyVisible(false);
+  };
+  const discover = async () => {
+    const controller = new AbortController(); setupJob.current?.abort(); setupJob.current = controller;
+    setDiscovering(true); setResult(null);
+    try {
+      if (!value.apiKey.trim()) throw new Error('请先填写 API Key');
+      const connection = identifyApiAddress(value.endpoint);
+      const response = await fetch('/api/ai/connection-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ baseUrl: connection.baseUrl, apiKey: value.apiKey }) });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload.error || '读取模型列表失败');
+      if (!alive.current || controller.signal.aborted) return;
+      const list = Array.isArray(payload.models) ? payload.models : [];
+      const selected = recommendModels(list, { text: value.model, image: imageModel });
+      setConnectionModels(list); setValue(current => ({ ...current, provider: isSealedCredential(current.apiKey) ? current.provider : connection.provider, endpoint: connection.baseUrl, model: selected.text })); setImageModel(selected.image);
+      setResult({ ok: Boolean(list.length), text: list.length ? `已识别 ${list.length} 个模型。${editingId ? '已有模型选择已保留。' : '已推荐文章和封面模型，可直接使用或更换。'}接下来验证实际调用。` : '服务未提供模型目录，可直接填写模型名称。' });
+    } catch (error) { if (alive.current && !controller.signal.aborted) setResult({ ok: false, text: `${error instanceof Error ? error.message : '识别失败'}。可以直接填写模型名称，已有配置未改动。` }); }
+    finally { if (alive.current && !controller.signal.aborted) setDiscovering(false); }
+  };
   const validate = () => {
     if (value.provider === '本地模拟') return '';
     if (!value.endpoint.trim()) return '请填写 API 地址';
@@ -188,17 +222,30 @@ export default function ApiSettings({ profiles, roles, onClose, onChange: commit
   };
   const test = async () => {
     const error = validate();
-    if (error) { setResult({ ok: false, text: error }); return; }
-    if (value.provider === '本地模拟') { setResult({ ok: true, text: '本地模拟可用，生成方案时不会调用外部模型。' }); return; }
-    setTesting(true);
-    const checks = await Promise.all([
-      fetch('/api/ai/connection-models', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseUrl: value.endpoint, apiKey: value.apiKey }) }).then(async (response) => { const payload = await response.json(); return { ok: response.ok && payload?.ok, text: response.ok && payload?.ok ? `服务连接：可读取 /models（${payload.models.length} 个模型）` : `服务连接：${payload?.error || '无法读取 /models'}` }; }).catch((error) => ({ ok: false, text: `服务连接：${error instanceof Error ? error.message : '请求失败'}` })),
-      value.model.trim() ? requestAi({ provider: value.provider, apiKey: value.apiKey, model: value.model, endpoint: value.endpoint, adapter: textAdapter || 'openai-chat', prompt: '', action: 'test' }).then((response) => ({ ok: response.ok, text: response.ok ? `文本模型 ${response.model}：连接成功` : `文本模型：${response.error}` })) : Promise.resolve(null),
-      imageModel.trim() ? fetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: value.provider, baseUrl: value.endpoint, apiKey: value.apiKey, model: imageModel, adapter: imageAdapter || defaultImageAdapter(value.provider, value.endpoint, imageModel), prompt: '一枚简洁的蓝色圆形图标', action: 'test' }) }).then(async (response) => { const payload = await response.json(); return { ok: response.ok && payload?.ok, text: response.ok && payload?.ok ? `配图模型 ${imageModel}：生成成功` : `配图模型：${payload?.error || '测试失败'}` }; }).catch((error) => ({ ok: false, text: `配图模型：${error instanceof Error ? error.message : '测试失败'}` })) : Promise.resolve(null),
-    ]);
-    const results = checks.filter((item): item is { ok: boolean; text: string } => item !== null);
-    setResult({ ok: results.every((item) => item.ok), text: results.map((item) => item.text).join('；') });
-    setTesting(false);
+    if (error) { setResult({ ok: false, text: error }); return false; }
+    if (value.provider === '本地模拟') { setResult({ ok: true, text: '本地模拟可用，不调用外部模型。' }); return true; }
+    const controller = new AbortController(); setupJob.current?.abort(); setupJob.current = controller;
+    setTesting(true); setResult(null);
+    try {
+      const checks: string[] = [];
+      if (value.model.trim()) {
+        const response = await requestAi({ provider: value.provider, apiKey: value.apiKey, model: value.model, endpoint: value.endpoint, adapter: textAdapter || 'openai-chat', prompt: '', action: 'test' }, controller.signal);
+        if (!response.ok) throw new Error(`文章模型未通过：${response.error}`);
+        checks.push('文章模型连接通过');
+      }
+      if (verifyImage && imageModel.trim()) {
+        const response = await fetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal, body: JSON.stringify({ provider: value.provider, baseUrl: value.endpoint, apiKey: value.apiKey, model: imageModel, adapter: imageAdapter || defaultImageAdapter(value.provider, value.endpoint, imageModel), prompt: '纯白背景中一枚蓝色圆形，不含文字', action: 'test' }) });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || typeof payload.src !== 'string') throw new Error(`封面模型未通过：${payload.error || '未返回图片'}`);
+        checks.push('封面模型出图通过');
+      }
+      if (!alive.current || controller.signal.aborted) return false;
+      setResult({ ok: true, text: checks.join('；') || '未执行模型验证' });
+      return true;
+    } catch (error) {
+      if (alive.current && !controller.signal.aborted) setResult({ ok: false, text: `${error instanceof Error ? error.message : '连接未完成'}。已有配置未改动。` });
+      return false;
+    } finally { if (alive.current && !controller.signal.aborted) setTesting(false); }
   };
   const save = async () => {
     if (savingRef.current) return;
@@ -218,7 +265,8 @@ export default function ApiSettings({ profiles, roles, onClose, onChange: commit
     const next = previous ? profiles.map((item) => item.id === id ? profile : item) : [...profiles, profile];
     const textId = roles.textId === id && !profile.models.text ? '' : roles.textId || (profile.models.text ? id : '');
     const imageId = roles.imageId === id && !profile.models.image ? '' : roles.imageId || (profile.models.image ? id : '');
-    if (onChange(next, { textId, imageId, textModelId: next.find((item) => item.id === textId)?.modelConfigs.find((item) => item.capabilities.includes('text'))?.id, imageModelId: next.find((item) => item.id === imageId)?.modelConfigs.find((item) => item.capabilities.includes('image-generation'))?.id })) onClose();
+    if (!alive.current) return;
+    if (onChange(next, { textId, imageId, textModelId: textId === id ? `${id}:text` : roles.textModelId || next.find(item => item.id === textId)?.modelConfigs.find(item => item.capabilities.includes('text'))?.id, imageModelId: imageId === id ? `${id}:image` : roles.imageModelId || next.find(item => item.id === imageId)?.modelConfigs.find(item => item.capabilities.includes('image-generation'))?.id })) onClose();
     } catch (error) { setResult({ ok: false, text: error instanceof Error ? error.message : '安全保存失败' }); }
     finally { savingRef.current = false; setSaving(false); }
   };
@@ -233,24 +281,34 @@ export default function ApiSettings({ profiles, roles, onClose, onChange: commit
     <section className="v091-local-api-modal api-settings-modal" role="dialog" aria-modal="true" aria-labelledby="apiSettingsTitle">
       <header className="api-settings-header">
         <span className="api-settings-kicker">KAIPAI / AI SERVICE</span>
-        <h2 id="apiSettingsTitle">AI 服务配置</h2>
-        <p>选择服务、确认模型，再测试连接。</p>
+        <h2 id="apiSettingsTitle">连接 AI 服务</h2>
+        <p>可选配置。风格、组件、编辑与导出无需 API；只使用文字功能时，封面模型可留空。</p>
         <button type="button" className="api-settings-close" onClick={() => { if (!savingRef.current) onClose(); }} aria-label="关闭 API 设置">×</button>
       </header>
-      <fieldset className="api-settings-scroll" disabled={saving} style={{ border: 0, margin: 0, minWidth: 0 }}>
+      <fieldset className="api-settings-scroll" disabled={saving || testing || discovering} style={{ border: 0, margin: 0, minWidth: 0 }}>
+        {!advanced && <>
+          {profiles.length > 0 && <div className="api-form-field"><label htmlFor="apiSavedService">当前服务</label><select id="apiSavedService" value={editingId} onChange={event => loadProfile(event.target.value)}>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}{profile.id === roles.textId ? ' · 文章正在使用' : ''}{profile.id === roles.imageId ? ' · 封面正在使用' : ''}</option>)}<option value="">＋ 添加其他服务</option></select></div>}
+          <div className="api-form-field"><div className="api-field-head"><label htmlFor="apiQuickEndpoint">API 地址</label></div><input id="apiQuickEndpoint" value={value.endpoint} onChange={event => { set({ endpoint: event.target.value }); setConnectionModels([]); }} onBlur={() => { try { const connection = identifyApiAddress(value.endpoint); setValue(current => ({ ...current, endpoint: connection.baseUrl, provider: isSealedCredential(current.apiKey) ? current.provider : connection.provider })); } catch { /* Show actionable validation only on submit. */ } }} placeholder="例如 https://example.com/v1" autoComplete="off" /></div>
+          <div className="api-form-field"><div className="api-field-head"><label htmlFor="apiQuickKey">API Key</label></div><div className="api-key-field"><input id="apiQuickKey" type={keyVisible ? 'text' : 'password'} value={isSealedCredential(value.apiKey) ? '' : value.apiKey} onChange={event => set({ apiKey: event.target.value })} placeholder={isSealedCredential(value.apiKey) ? '已安全保存，无需重填' : '粘贴当前服务的 Key'} autoComplete="off" /><button type="button" disabled={isSealedCredential(value.apiKey)} onClick={() => setKeyVisible(current => !current)}>{keyVisible ? '隐藏' : '显示'}</button></div></div>
+          <button className="api-discover" type="button" onClick={discover}>识别模型</button>
+          <div className="api-quick-models"><div className="api-form-field"><label htmlFor="apiQuickText">文章与审核模型</label><input id="apiQuickText" list="apiQuickTextChoices" value={value.model} onChange={event => set({ model: event.target.value })} placeholder="识别后推荐，也可直接输入" autoComplete="off" /><datalist id="apiQuickTextChoices">{connectionModels.filter(model => modelKind(model.id) === 'text').map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</datalist></div><div className="api-form-field"><label htmlFor="apiQuickImage">封面模型（可选）</label><input id="apiQuickImage" list="apiQuickImageChoices" value={imageModel} onChange={event => { setImageModel(event.target.value); setImageAdapter(''); setResult(null); }} placeholder="识别后推荐，也可直接输入" autoComplete="off" /><datalist id="apiQuickImageChoices">{connectionModels.filter(model => modelKind(model.id) === 'image').map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</datalist></div></div>
+          {imageModel && <label className="api-quick-check"><input type="checkbox" checked={verifyImage} onChange={event => setVerifyImage(event.target.checked)} />保存前生成一张小图验证封面连接（使用 API 额度）</label>}
+        </>}
+        <button type="button" className="api-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced(current => !current)}>{advanced ? '收起高级设置' : '高级设置与多服务分配'}</button>
+        {advanced && <>
         <section className="api-profile-manager" aria-label="已保存的 AI 服务">
           <div className="api-field-head"><h3>已保存的 AI 服务</h3><span>{profiles.length} 个配置 · 加密凭证保存在此浏览器</span></div>
           {profiles.length ? <div className="api-profile-list">{profiles.map((profile) => <div className="api-profile-item" key={profile.id}><div><b>{profile.name}</b><small>{profile.provider} · 文本 {profile.models.text || '未配置'} · 配图 {profile.models.image || '未配置'}</small></div><button type="button" onClick={() => { setEditingId(profile.id); setProfileName(profile.name); setImageModel(profile.models.image); setTextAdapter(profile.adapters.text === 'openai-chat' ? '' : profile.adapters.text); setImageAdapter(profile.adapters.image === defaultImageAdapter(profile.provider, profile.baseUrl, profile.models.image) ? '' : profile.adapters.image); setWorkspaceId(profile.workspaceId || ''); setConnectionModels([]); setOfficialModels([]); setModels([]); setImageModels([]); setValue({ provider: profile.provider, apiKey: profile.apiKey, model: profile.models.text, endpoint: profile.baseUrl }); }}>编辑</button><button type="button" onClick={() => { const next = profiles.filter((item) => item.id !== profile.id); const textId = roles.textId === profile.id ? next.find((item) => item.models.text)?.id || '' : roles.textId; const imageId = roles.imageId === profile.id ? next.find((item) => item.models.image)?.id || '' : roles.imageId; onChange(next, { textId, imageId, textModelId: next.find((item) => item.id === textId)?.modelConfigs.find((item) => item.capabilities.includes('text'))?.id, imageModelId: next.find((item) => item.id === imageId)?.modelConfigs.find((item) => item.capabilities.includes('image-generation'))?.id }); }}>删除</button></div>)}</div> : <p className="api-model-empty">还没有保存的服务。下方表单可新建配置。</p>}
-          <div className="api-role-grid"><RolePicker label="文章修改与排版" value={roles.textId} choices={[{ id: '', label: '本地模拟' }, ...profiles.filter((profile) => profile.models.text).map((profile) => ({ id: profile.id, label: `${profile.name} · ${profile.models.text}` }))]} onSelect={(textId) => onChange(profiles, { ...roles, textId, textModelId: profiles.find((item) => item.id === textId)?.modelConfigs.find((item) => item.capabilities.includes('text'))?.id })} /><RolePicker label="图片生成" value={roles.imageId} choices={[{ id: '', label: '未选择' }, ...profiles.filter((profile) => profile.models.image).map((profile) => ({ id: profile.id, label: `${profile.name} · ${profile.models.image}` }))]} onSelect={(imageId) => onChange(profiles, { ...roles, imageId, imageModelId: profiles.find((item) => item.id === imageId)?.modelConfigs.find((item) => item.capabilities.includes('image-generation'))?.id })} /></div>
+          <div className="api-role-grid"><RolePicker label="文章修改与排版" value={roles.textId} choices={[{ id: '', label: '不启用 AI 文字功能' }, ...profiles.filter((profile) => profile.models.text).map((profile) => ({ id: profile.id, label: `${profile.name} · ${profile.models.text}` }))]} onSelect={(textId) => onChange(profiles, { ...roles, textId, textModelId: profiles.find((item) => item.id === textId)?.modelConfigs.find((item) => item.capabilities.includes('text'))?.id })} /><RolePicker label="图片生成" value={roles.imageId} choices={[{ id: '', label: '未选择' }, ...profiles.filter((profile) => profile.models.image).map((profile) => ({ id: profile.id, label: `${profile.name} · ${profile.models.image}` }))]} onSelect={(imageId) => onChange(profiles, { ...roles, imageId, imageModelId: profiles.find((item) => item.id === imageId)?.modelConfigs.find((item) => item.capabilities.includes('image-generation'))?.id })} /></div>
         </section>
         <div className="api-field-head"><h3>{editingId ? '编辑服务' : '添加 AI 服务'}</h3>{editingId && <button type="button" className="api-endpoint-reset" onClick={reset}>添加新服务</button>}</div>
         <div className="api-step-heading"><span>01</span><div><h3>选择服务并填写凭证</h3><p>API 地址和 Key 只填一次，供下方两个模型共用。</p></div></div>
         <div className="api-provider-grid" role="group" aria-label="主要模型服务">
           {MAIN_PROVIDERS.map((provider) => <button key={provider} type="button" className={value.provider === provider ? 'active' : ''} aria-pressed={value.provider === provider} onClick={() => chooseProvider(provider)}><b>{provider}</b><small>{PROVIDER_DESCRIPTIONS[provider]}</small></button>)}
         </div>
-        <div className="api-other-providers" role="group" aria-label="更多模型服务"><span>其他服务</span>{OTHER_PROVIDERS.map((provider) => <button key={provider} type="button" aria-pressed={value.provider === provider} className={value.provider === provider ? 'active' : ''} onClick={() => chooseProvider(provider)}>{provider === 'Custom' ? '自定义接口' : provider}</button>)}</div>
+        <div className="api-other-providers" role="group" aria-label="更多模型服务"><span>其他服务</span>{OTHER_PROVIDERS.map((provider) => <button key={provider} type="button" aria-pressed={value.provider === provider} className={value.provider === provider ? 'active' : ''} onClick={() => chooseProvider(provider)}>{provider === 'Custom' ? '自定义接口' : provider === '本地模拟' ? '不启用 AI' : provider}</button>)}</div>
 
-        {value.provider === '本地模拟' ? <div className="api-local-card"><b>本地模拟已就绪</b><p>无需密钥，可体验“生成方案 → 查看建议 → 应用风格”的流程。</p></div> : <>
+        {value.provider === '本地模拟' ? <div className="api-local-card"><b>未启用 AI 文字功能</b><p>本地风格、组件、编辑和导出可直接使用。</p></div> : <>
           <div className="api-credential-fields">
           <div className="api-form-field"><div className="api-field-head"><label htmlFor="apiProfileName">服务名称</label></div><input id="apiProfileName" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="例如：我的 AI 服务" maxLength={36} /></div>
           <div className="api-form-field"><div className="api-field-head"><label htmlFor="apiEndpoint">API 地址</label>{value.provider !== 'Custom' && <button type="button" className="api-endpoint-reset" onClick={() => set({ endpoint: defaultEndpoint })}>恢复默认</button>}</div><input id="apiEndpoint" value={endpoint} onChange={(event) => set({ endpoint: event.target.value })} placeholder="https://example.com/v1 或 http://example.com/v1" autoComplete="off" />{value.provider === 'Kimi' && <div className="api-region-choice" role="group" aria-label="Kimi API 区域"><button type="button" className={endpoint === 'https://api.moonshot.cn/v1' ? 'active' : ''} aria-pressed={endpoint === 'https://api.moonshot.cn/v1'} onClick={() => set({ endpoint: 'https://api.moonshot.cn/v1' })}>中国站</button><button type="button" className={endpoint === 'https://api.moonshot.ai/v1' ? 'active' : ''} aria-pressed={endpoint === 'https://api.moonshot.ai/v1'} onClick={() => set({ endpoint: 'https://api.moonshot.ai/v1' })}>国际站</button></div>}</div>
@@ -278,10 +336,11 @@ export default function ApiSettings({ profiles, roles, onClose, onChange: commit
           </section>
 
         </>}
-        <p className="api-settings-note">保存后，此浏览器只保留加密凭证，关闭后再打开可继续使用；清除网站数据后需重新填写。调用时密钥由本站后端解密并转发给所选服务。测试会分别请求已填写的文本模型和配图模型；配图测试会实际生成一张小图，可能产生费用。</p>
+        </>}
+        <p className="api-settings-note">凭证加密保存在当前浏览器，模型请求由楷排服务端转发。识别目录不等于调用成功；文章模型的看图能力会在封面审核时实际检验。</p>
         {result && <div className={`api-test-result ${result.ok ? 'success' : 'error'}`} role="status">{result.text}</div>}
       </fieldset>
-      <footer className="api-settings-actions"><button type="button" className="api-save" onClick={save} disabled={saving || testing}>{saving ? '安全保存中…' : '保存配置'}</button><button type="button" className="api-test" onClick={test} disabled={testing || saving}>{testing ? '测试中…' : '测试连接'}</button><button type="button" className="api-reset" onClick={reset} disabled={saving}>清空</button><button type="button" className="api-cancel" onClick={() => { if (!savingRef.current) onClose(); }}>取消</button></footer>
+      <footer className={`api-settings-actions ${advanced ? '' : 'api-quick-actions'}`}><button type="button" className="api-save" onClick={async () => { if (verifySaveRef.current) return; verifySaveRef.current = true; try { if (await test() && alive.current) await save(); } finally { verifySaveRef.current = false; } }} disabled={saving || testing || discovering}>{saving ? '安全保存中…' : testing ? '正在验证连接…' : discovering ? '正在识别模型…' : '验证并保存'}</button>{advanced && <><button type="button" className="api-test" onClick={save} disabled={testing || saving}>仅保存，暂不验证</button><button type="button" className="api-reset" onClick={reset} disabled={saving || testing}>清空</button></>}<button type="button" className="api-cancel" onClick={() => { setupJob.current?.abort(); if (!savingRef.current) onClose(); }}>{testing || discovering ? '取消操作' : '关闭'}</button></footer>
     </section>
   </div>;
 }

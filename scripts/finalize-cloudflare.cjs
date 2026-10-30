@@ -11,7 +11,13 @@ const styles = fs.readdirSync(path.join(client, '_next/static/css')).filter(file
 const currentAssets = publicAssets(manifest, styles);
 const retained = copyRetained(client);
 const assets = [...new Set([...currentAssets, ...Object.keys(retained)])].sort();
-const needed = [...new Set([...collectPrecache(manifest, ['virtual:vinext-app-browser-entry', 'app/page.tsx', 'app/error.tsx'], styles), ...Object.keys(retained)])].sort();
+// Cache only the static startup graph and rich editor before publishing HOME.
+// Optional panels/importers and historical releases stay available on the server,
+// but never hold a usable current shell hostage to their background downloads.
+const referencedCss = new Set(Object.values(manifest).flatMap(item => item.css || []));
+const globalStyles = styles.filter(file => !referencedCss.has(file));
+const needed = collectPrecache(manifest, ['virtual:vinext-app-browser-entry', 'app/page.tsx', 'app/error.tsx', 'app/rich-editor.tsx'], globalStyles, { dynamic: false });
+const optional = currentAssets.filter(file => !needed.includes(file));
 const bootstrap = ['virtual:vinext-app-browser-entry', 'app/page.tsx'].map(key => {
   if (!manifest[key]) throw new Error('Missing public shell entry: ' + key);
   return '/' + manifest[key].file;
@@ -21,10 +27,10 @@ const hashes = Object.fromEntries(assets.map(file => [file, crypto.createHash('s
 const version = crypto.createHash('sha256').update(require('./verify-cloudflare-build.cjs').sourceDigest())
   .update(fs.readFileSync(path.join(root, '.cloudflare-deploy/dist/server/BUILD_ID'))).update(JSON.stringify(assets)).update(template).digest('hex').slice(0, 20);
 let source = template;
-for (const [token, value] of Object.entries({ __KAIPAI_RELEASE__: version, __KAIPAI_PRECACHE__: needed, __KAIPAI_BOOTSTRAP__: bootstrap, __KAIPAI_ALLOWED_ASSETS__: assets, __KAIPAI_ASSET_HASHES__: hashes })) source = source.replace(token, JSON.stringify(value));
+for (const [token, value] of Object.entries({ __KAIPAI_RELEASE__: version, __KAIPAI_PRECACHE__: needed, __KAIPAI_OPTIONAL__: optional, __KAIPAI_BOOTSTRAP__: bootstrap, __KAIPAI_ALLOWED_ASSETS__: assets, __KAIPAI_ASSET_HASHES__: hashes })) source = source.replace(token, JSON.stringify(value));
 if (/__KAIPAI_[A-Z_]+__/.test(source)) throw new Error('Unresolved public shell token');
 fs.writeFileSync(path.join(client, 'sw.js'), source);
 const headers = path.join(client, '_headers');
 fs.appendFileSync(headers, '\n/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n');
-fs.writeFileSync(path.join(root, '.cloudflare-deploy/public-shell.json'), JSON.stringify({ version, bootstrap, precache: needed, allowedAssets: assets }, null, 2));
-console.log(`Public shell ${version}: ${needed.length} required public assets; ${Object.keys(retained).length} retained; APIs excluded.`);
+fs.writeFileSync(path.join(root, '.cloudflare-deploy/public-shell.json'), JSON.stringify({ version, bootstrap, precache: needed, optional, allowedAssets: assets }, null, 2));
+console.log(`Public shell ${version}: ${needed.length} core assets, ${optional.length} idle/on-demand assets; ${Object.keys(retained).length} retained on server; APIs excluded.`);

@@ -99,7 +99,7 @@ function publicAssets(manifest, styles) {
   return [...new Set([...Object.values(manifest).flatMap(item => [item.file, ...(item.css || [])]), ...styles])]
     .map(file => '/' + file).filter(file => assetPath.test(file)).sort();
 }
-function collectPrecache(manifest, entries, styles) {
+function collectPrecache(manifest, entries, styles, { dynamic = true } = {}) {
   const needed = new Set(styles.map(file => '/' + file));
   const visited = new Set();
   function visit(key) {
@@ -107,7 +107,7 @@ function collectPrecache(manifest, entries, styles) {
     visited.add(key);
     const item = manifest[key];
     for (const file of [item.file, ...(item.css || [])]) if (assetPath.test('/' + file)) needed.add('/' + file);
-    for (const imported of [...(item.imports || []), ...(item.dynamicImports || [])]) visit(imported);
+    for (const imported of [...(item.imports || []), ...(dynamic ? item.dynamicImports || [] : [])]) visit(imported);
   }
   entries.forEach(visit);
   return [...needed].sort();

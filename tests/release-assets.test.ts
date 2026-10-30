@@ -58,6 +58,9 @@ export async function run() {
       '/_next/static/chunks/credential.js', '/_next/static/chunks/local-api.js', '/_next/static/chunks/page.js',
       '/_next/static/chunks/shared.js', '/_next/static/css/credential.css',
     ], 'precache must include transitive dynamic dependencies and handle cycles');
+    assert.deepEqual(collectPrecache(graph, ['page'], [], { dynamic: false }), [
+      '/_next/static/chunks/page.js', '/_next/static/chunks/shared.js',
+    ], 'core installation follows static imports without downloading never-used optional features');
   } finally {
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));

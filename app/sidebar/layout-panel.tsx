@@ -184,8 +184,8 @@ export function LayoutPanel({ model }: {
 
 
         <div className={"quick-style-list"} id={"quickStyleList"}>
-          {STYLE_ORDER.map(id =>
-            <button key={id} type="button" className={'quick-style-card' + (id === p.styleId ? ' active' : '')} data-neo-block="style" data-family={STYLE_FAMILY[id]} data-v080-style={id} data-layout={id} hidden={!expanded && !visible.includes(id)} aria-pressed={id === p.styleId} onClick={() => p.onStyleChange(id)}>
+          {STYLE_ORDER.filter(id => expanded || visible.includes(id)).map(id =>
+            <button key={id} type="button" className={'quick-style-card' + (id === p.styleId ? ' active' : '')} data-neo-block="style" data-family={STYLE_FAMILY[id]} data-v080-style={id} data-layout={id} aria-pressed={id === p.styleId} onClick={() => p.onStyleChange(id)}>
               <StyleThumb id={id} />
               <span>
                 <b>

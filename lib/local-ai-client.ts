@@ -85,7 +85,12 @@ export async function localAiFetch(path: string, body: Body, signal?: AbortSigna
     throw new Error('此操作暂不支持本地直连');
   } catch (error) {
     if (signal?.aborted) throw error;
-    if (controller.signal.aborted) throw new Error('本地 API 响应超时，请重试或更换模型');
+    if (controller.signal.aborted) {
+      const permission = await localPermissionState();
+      if (permission === 'denied') throw await localConnectionFailure();
+      if (permission === 'prompt') throw new Error('正在等待浏览器允许访问本机应用和服务。请在网站的授权弹窗中选择允许，然后重试。');
+      throw new Error('本地 API 响应超时，请重试或更换模型');
+    }
     if (error instanceof Error && ['IncompleteChatStream', 'ChatOutputLimit', 'ChatContentFiltered'].includes(error.message)) throw new Error('模型回复中断或被截断，未应用不完整结果，请重试');
     throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }

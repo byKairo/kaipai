@@ -22,7 +22,11 @@ export async function localAuthHeader(baseUrl: string, signal: AbortSignal): Pro
   const cancel = () => controller.abort();
   signal.addEventListener('abort', cancel, { once: true });
   if (signal.aborted) cancel();
-  const timer = setTimeout(cancel, 1500);
+  // The first request can be paused by Chrome's permission prompt. Do not
+  // abandon identification after 1.5 seconds and incorrectly switch back to
+  // Bearer while the user is still deciding whether to allow loopback access.
+  const permission = await localPermissionState();
+  const timer = setTimeout(cancel, permission === 'prompt' ? 15000 : 1500);
   try {
     const response = await fetch(new URL('/', url).href, loopbackOptions({ signal: controller.signal, credentials: 'omit', cache: 'no-store', redirect: 'manual' }));
     if (!response.ok || !response.headers.get('content-type')?.includes('json')) return 'Authorization';

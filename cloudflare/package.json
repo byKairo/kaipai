@@ -5,7 +5,7 @@
   "scripts": {
     "build": "vite build",
     "preview": "wrangler dev --config dist/server/wrangler.json",
-    "deploy": "node ../scripts/verify-github-release.cjs && node ../scripts/verify-cloudflare-build.cjs && node ../scripts/release-assets.cjs verify && wrangler deploy --config dist/server/wrangler.json"
+    "deploy": "node ../scripts/verify-github-release.cjs && node ../scripts/verify-cloudflare-build.cjs && node ../scripts/release-assets.cjs verify && node ../scripts/publish-github-release.cjs"
   },
   "dependencies": {
     "@tiptap/extension-highlight": "3.32.0",

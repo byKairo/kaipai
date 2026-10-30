@@ -7,7 +7,7 @@
 1. 从 GitHub main 获取当前已提交源码。工作区可能有未发布的修改，先查看 git status，保留它们。
 2. 完成修改和验证后提交并推送到 main。只有 main 推送或手动运行现有 Deploy Kaipai 工作流会部署。
 3. GitHub Actions 根据锁文件安装依赖，完整测试、检查类型，保留旧版资源并构建；再检查公开产物和 Workers 运行时行为。任何必要检查失败都不发布。
-4. 使用已有 Worker 专属部署 Secret 更新 Cloudflare 的 kaipai。不要从本机直接发布，也不要把密钥写入源码或日志。
+4. 使用已有 Worker 专属部署 Secret 上传新的代码版本，再将该版本切换为 100% 流量。此流程保留现有域名绑定，不尝试修改域名，不需要扩大令牌权限。不要从本机直接发布，也不要把密钥写入源码或日志。
 5. 读取正式站点 GET /api/release，核对 commit 与该次 GitHub Actions 的完整 SHA 相同；只有流程成功并核对一致才算发布完成。
 
 入口：https://kaipai.itskairo.com/ 。构建记录：https://github.com/byKairo/kaipai/actions 。

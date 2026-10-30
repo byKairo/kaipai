@@ -21,7 +21,7 @@ function sourceDigest() {
   return digest(['app', 'lib', 'server', 'public', 'cloudflare'].flatMap(name => files(path.join(root, name))).concat([
     ...['next.config.mjs', 'tsconfig.json', 'package.json', 'package-lock.json'].map(name => path.join(root, name)),
     path.join(root, 'scripts/prepare-cloudflare.cjs'), path.join(root, 'scripts/finalize-cloudflare.cjs'), __filename,
-    path.join(root, 'scripts/release-assets.cjs'), path.join(root, 'scripts/verify-github-release.cjs'), path.join(root, 'scripts/deployment-safety.cjs'),
+    path.join(root, 'scripts/release-assets.cjs'), path.join(root, 'scripts/verify-github-release.cjs'), path.join(root, 'scripts/publish-github-release.cjs'), path.join(root, 'scripts/deployment-safety.cjs'),
   ]).sort());
 }
 function createReleaseId(source) {

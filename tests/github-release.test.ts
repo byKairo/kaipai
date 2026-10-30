@@ -5,6 +5,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 const { verifyGitHubRelease } = require('../scripts/verify-github-release.cjs');
 const { artifactDigest } = require('../scripts/verify-cloudflare-build.cjs');
+const { uploadedVersion } = require('../scripts/publish-github-release.cjs');
 
 export function run() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kaipai-release-gate-'));
@@ -32,6 +33,10 @@ export function run() {
     assert.equal(artifactDigest(dist), originalDigest, 'runtime validation state is not a deployed build artifact');
     fs.writeFileSync(path.join(dist, 'worker.js'), 'export default { changed: true };');
     assert.notEqual(artifactDigest(dist), originalDigest, 'actual code changes must still invalidate the build');
+    const version = '12345678-1234-1234-1234-123456789abc';
+    assert.equal(uploadedVersion(`Worker Version ID: ${version}\n`), version);
+    assert.throws(() => uploadedVersion('Upload failed'), /未执行流量切换/);
+    assert.throws(() => uploadedVersion(`Version ID: ${version}\nVersion ID: 00000000-1234-1234-1234-123456789abc`), /未执行流量切换/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
   console.log('PASS: local/fork/feature publication refusal, matching GitHub head and immutable build commit');
 }

@@ -25,7 +25,6 @@ body:has(#kaipai-studio){margin:0!important;padding:0!important;background:#f7f0
 #kaipai-studio .v091-top-actions .v091-btn:hover { background:#f7f0d3!important;color:#1b1b1b!important;transform:translateY(-1px); }
 #kaipai-studio .v091-top-chip { border:0!important;background:transparent!important;color:#d1cbb6!important;box-shadow:none!important;font-size:11px;height:32px; }
 #kaipai-studio .v091-top-help { order:6;border:1px solid #767162!important;color:#f7f0d3!important;background:transparent!important;width:28px;height:28px;box-shadow:none!important; }
-#kaipai-studio .v091-top-separator { border-color:#575448; }
 #kaipai-studio .v091-workspace { grid-template-columns:290px minmax(320px,1fr) minmax(320px,.86fr)!important;gap:18px!important;padding:22px 24px 20px!important;background:radial-gradient(#1b1b1b19 .8px,transparent .8px) 0 0/16px 16px!important; }
 #kaipai-studio .v091-pane,#kaipai-studio .v091-sidebar-host #sidebar.sidebar { border:2px solid #1b1b1b!important;border-radius:3px!important;box-shadow:4px 4px 0 #1b1b1b!important;background:#fffef8!important; }
 #kaipai-studio .v091-sidebar-host { overflow:visible; }
@@ -82,7 +81,7 @@ body:has(#kaipai-studio){margin:0!important;padding:0!important;background:#f7f0
 #kaipai-studio .v091-pane>header { flex-shrink:0;min-height:54px!important;height:54px!important;padding:0 16px!important;border:0!important;border-bottom:2px solid #1b1b1b!important;background:#ffdc58!important;color:#1b1b1b!important;gap:8px!important; }
 #kaipai-studio .v091-pane>header b { font-size:14px!important;letter-spacing:0!important; }
 #kaipai-studio .v091-pane>header b::before { display:none!important; }
-#kaipai-studio .v091-pane>header small,#kaipai-studio .v091-input-mode { display:none!important; }
+#kaipai-studio .v091-pane>header small { display:none!important; }
 #kaipai-studio .v091-pane>header button { margin-left:auto!important;padding:5px 8px!important;background:#fffef8!important;border:1px solid #1b1b1b!important;border-radius:2px!important;box-shadow:none!important;font-size:11px!important;color:#1b1b1b!important; }
 #kaipai-studio .v091-preview>header { background:#37bdf9!important; }
 #kaipai-studio .v091-preview-dir { display:none!important; }
@@ -104,7 +103,8 @@ body:has(#kaipai-studio){margin:0!important;padding:0!important;background:#f7f0
 #kaipai-studio .v091-editor-scroll .tiptap li::marker { color:var(--article-accent); }
 #kaipai-studio .v091-rich-editor h1 { font-size:25px!important;line-height:1.5!important;margin:0 0 24px!important;letter-spacing:-.02em; }
 #kaipai-studio .v091-rich-editor h2 { margin-top:1.6em!important;font-size:20px!important; }
-#kaipai-studio .v091-rich-editor mark { background-color:var(--article-mark-bg,#fff07a);background-image:var(--article-mark-image,none);color:var(--article-mark-ink,#1a1a1a);padding:var(--article-mark-padding,1px 4px);font-weight:inherit;box-decoration-break:clone;-webkit-box-decoration-break:clone; }
+#kaipai-studio .v091-rich-editor mark, #kaipai-studio .v091-rich-editor strong { background-color:var(--article-mark-bg,#fff07a);background-image:var(--article-mark-image,none);color:var(--article-mark-ink,#1a1a1a);padding:var(--article-mark-padding,1px 4px);font-weight:700;box-decoration-break:clone;-webkit-box-decoration-break:clone; }
+#kaipai-studio .v091-rich-editor strong mark, #kaipai-studio .v091-rich-editor mark strong { background:transparent; color:inherit; padding:0; }
 #kaipai-studio .v091-rich-editor img,#kaipai-studio .v091-editor-image img { display:block;max-width:100%!important;width:100%!important;height:auto!important;object-fit:contain!important; }
 #kaipai-studio .v091-editor-image { display:block;max-width:100%;margin:18px 0; }
 #kaipai-studio .v091-editor-image input { display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:5px 8px;border:1px solid #c8c1ab;border-radius:5px;background:#fffdf4;color:#555;font:12px/1.5 inherit;text-align:center; }
@@ -146,8 +146,6 @@ body:has(#kaipai-studio){margin:0!important;padding:0!important;background:#f7f0
 #kaipai-studio .follow-template-grid .ft-account { background:#102433!important;color:#fff!important;justify-content:flex-start!important;gap:7px; }
 #kaipai-studio .v091-preview-bg { padding:22px 18px 40px!important;background:repeating-linear-gradient(135deg,#f7f0d3 0 7px,#eee6c8 7px 8px)!important; }
 #kaipai-studio .v091-wechat-phone { border:1px solid #1b1b1b!important;border-radius:8px!important;box-shadow:4px 4px 0 #1b1b1b44!important;max-width:440px!important;overflow:hidden!important; }
-#kaipai-studio .v091-phone-top { padding:10px 12px!important;background:#fffef8!important;border-bottom:1px solid #1b1b1b!important;color:#1b1b1b!important;font-size:11px!important; }
-#kaipai-studio .v091-phone-top span { color:#656052!important;font-size:10px!important; }
 #kaipai-studio>footer { background:#f7f0d3!important;border-top:1px solid #1b1b1b!important;color:#656052!important;padding:0 24px!important;font-size:10px!important;letter-spacing:.04em!important; }
 #kaipai-studio .v091-toast { border:2px solid #1b1b1b!important;border-radius:2px!important;background:#ffdc58!important;color:#1b1b1b!important;box-shadow:4px 4px 0 #1b1b1b!important; }
 @media(max-width:1180px) and (min-width:900px) {
@@ -164,7 +162,8 @@ body:has(#kaipai-studio){margin:0!important;padding:0!important;background:#f7f0
  #kaipai-studio .v091-brand strong { font-size:19px; }
  #kaipai-studio .v091-top-actions { width:100%;margin:0;gap:6px;flex-wrap:wrap; }
  #kaipai-studio .v091-top-actions .v091-btn { padding:0 8px!important;font-size:11px!important;height:32px; }
- #kaipai-studio .v091-top-chip,#kaipai-studio .v091-top-separator,#kaipai-studio .v091-top-help { display:none!important; }
+ #kaipai-studio .v091-top-chip,
+#kaipai-studio .v091-top-help { display:none!important; }
  #kaipai-studio .v091-mobile-switch { display:flex!important;background:#f7f0d3!important; }
  #kaipai-studio .v091-mobile-switch button.active { background:#ffdc58!important;box-shadow:inset 0 -3px 0 #1b1b1b!important; }
  #kaipai-studio .v091-workspace { display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:0!important;padding:12px 14px 16px!important; }
@@ -348,5 +347,3 @@ body:has(#kaipai-studio)::before,body:has(#kaipai-studio)::after { display:none!
 #kaipai-studio #quickStyleList .quick-style-card {
   transition-property:background-color,border-color,color,box-shadow!important;
 }
-#kaipai-studio .v091-phone h1::before { content:none!important;display:none!important; }
-#kaipai-studio .v091-phone ol > li::before { content:none!important;display:none!important; }

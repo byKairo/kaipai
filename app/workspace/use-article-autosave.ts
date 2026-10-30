@@ -16,7 +16,7 @@ export function useArticleAutosave(article: ArticleRecord | null, onSaved: (arti
   callbacks.current = { onSaved, onError };
   const flush = () => {
     const snapshot = pending.current;
-    if (!snapshot) return;
+    if (!snapshot) return queue.current;
     pending.current = null;
     outstanding.current.set(snapshot.id, snapshot);
     // Serialize writes so an older IndexedDB operation cannot win over newer edits.
@@ -24,6 +24,7 @@ export function useArticleAutosave(article: ArticleRecord | null, onSaved: (arti
       if (outstanding.current.get(snapshot.id) === snapshot) outstanding.current.delete(snapshot.id);
       callbacks.current.onSaved(snapshot);
     }).catch(() => callbacks.current.onError());
+    return queue.current;
   };
   useEffect(() => {
     if (pending.current && pending.current.id !== article?.id) flush();

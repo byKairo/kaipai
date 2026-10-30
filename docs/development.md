@@ -1,43 +1,23 @@
-# 开发与部署
+# 开发与发布
 
-## 本地运行
+正式源码位于 app/、lib/。本地使用 npm ci、npm run dev；开发服务与生产构建不要同时运行。提交前执行 npm test、npm run typecheck、npm run build；Workers 部署另执行 cf:ci 及工作流中的运行时检查。
 
-```bash
-npm install
-npm run dev -- --hostname 127.0.0.1 --port 3003
-```
+## 唯一生产发布流程
 
-打开 <http://127.0.0.1:3003/>。
+1. 从 GitHub main 获取当前已提交源码。工作区可能有未发布的修改，先查看 git status，保留它们。
+2. 完成修改和验证后提交并推送到 main。只有 main 推送或手动运行现有 Deploy Kaipai 工作流会部署。
+3. GitHub Actions 根据锁文件安装依赖，完整测试、检查类型，保留旧版资源并构建；再检查公开产物和 Workers 运行时行为。任何必要检查失败都不发布。
+4. 使用已有 Worker 专属部署 Secret 更新 Cloudflare 的 kaipai。不要从本机直接发布，也不要把密钥写入源码或日志。
+5. 读取正式站点 GET /api/release，核对 commit 与该次 GitHub Actions 的完整 SHA 相同；只有流程成功并核对一致才算发布完成。
 
-开发服务运行期间不要同时执行 `npm run build`；生产构建会重写 `.next`，需要先停止开发服务，构建完成后再重新启动。
+入口：https://kaipai.itskairo.com/ 。构建记录：https://github.com/byKairo/kaipai/actions 。
 
-## 检查与源码位置
+浏览器已经打开的页面可能继续运行旧代码；新发布包保留旧模块，并补齐已验证的公开缓存。需要明确打开最新在线页面时可在地址上带 release 参数；该导航绕过旧缓存首页，不清理用户文稿。
 
-```bash
-npm test
-npm run typecheck
-npm run build
-node scripts/css-audit.cjs
-```
+## 资源兼容与源码对应
 
-排版测试包含 12 套风格的内容、结构、转义与兼容检查，以及已确认的输出基线。输出基线只能在核对实际变化后显式更新。
+cloudflare/asset-history/ 保存已发布的公开 JS/CSS 与哈希；cf:build 和 cf:ci 在准备源码前同步当前生产资源。首次构建需要网络。cf:deploy 在上传前再次检查旧依赖。构建和运行时校验产生的 .wrangler 临时数据库不属于发布产物，真实代码仍参与完整指纹校验。
 
-## GitHub 自动部署
+GitHub Actions 将 GITHUB_SHA 写入准备记录和 Worker 构建。/api/release 使用该固定值，不根据浏览器缓存或本地配置猜测版本。本机 cf:deploy 会明确拒绝；本机 cf:build、cf:preview 不受影响。
 
-向 `main` 分支推送提交后，GitHub Actions 会安装依赖，执行测试和类型检查，构建 Cloudflare 版本，然后更新已有 Worker `kaipai`。只修改本地文件不会触发上线，需要提交并推送到 GitHub。构建或检查失败时不会执行发布。
-
-- 网站：https://kaipai.kairostudio.workers.dev/
-- 构建记录：https://github.com/byKairo/kaipai/actions
-- 流程配置：`.github/workflows/deploy.yml`
-- 发布密钥：仓库 Actions Secret `CLOUDFLARE_API_TOKEN`，仅用于部署步骤；不要写入源码。Cloudflare 令牌当前只包含指定账号的 Workers 脚本编辑权限，范围覆盖该账号的 Workers。
-- 运行时密钥 `KAIPAI_CREDENTIAL_KEYS` 保存在 Cloudflare Worker Secrets 中，克隆仓库自行部署时需要另行创建，不能复用其他部署的密钥。
-
-本地与 Cloudflare 的依赖分别由根目录和 `cloudflare/` 下的锁定文件管理；部署时生成的 `.cloudflare-deploy/` 不提交到仓库。当前未启用 Cloudflare 原生 Git 构建或其他分支的自动预览。
-
-正式实现位于 `app/`、`lib/`，产品与网络边界见 [ARCHITECTURE.md](../ARCHITECTURE.md)。
-
-## 发布权限约束
-
-自动发布只在 `byKairo/kaipai` 的 `main` 分支运行。Actions 使用完整提交 SHA 固定，仓库只允许流程中列出的两个官方 Action；以后升级 Action 或添加新 Action 时，需要同步更新仓库 Settings → Actions 的允许列表。构建检出不保留 GitHub 登录凭据。
-
-主分支禁止强推和删除，正常提交推送仍可直接触发发布。仓库已开启 GitHub 密钥扫描和推送保护；不要绕过真实密钥告警。Cloudflare 部署令牌只引用 GitHub Actions Secret，模型 API Key 不应写入仓库或工作流。
+2026-10-30 统一前，GitHub 最后一次自动部署在 10-22，后续通过本机隔离生产归档发布。此次以已验证的 5f632cdd 生产归档为基础，保留 GitHub 已有防护与依赖补丁，合并本机 API 和缓存兼容修复。其他根工作区未发布改动未混入。

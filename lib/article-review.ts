@@ -1,40 +1,15 @@
 import type { Node as DocumentNode } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
+import { closeHistory } from '@tiptap/pm/history';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 
-export type ArticleSuggestion = {
-  id: string;
-  kind: 'replace' | 'emphasis' | 'clarify';
-  quote: string;
-  prefix: string;
-  suffix: string;
-  replacement: string | null;
-  presentation: 'bold' | 'highlight';
-  reason: string;
-};
-export type ReviewItem = ArticleSuggestion & { from: number; to: number };
-export type ReviewState = { items: ReviewItem[]; activeId: string | null };
+import { registerArticleReviewController, type ArticleSuggestion, type ReviewItem, type ReviewState } from './article-review-client';
+export { parseArticleSuggestions } from './article-review-client';
+export type { ArticleSuggestion, ReviewItem, ReviewState } from './article-review-client';
 type ReviewAction = { type: 'set'; items: ReviewItem[] } | { type: 'select'; id: string | null } | { type: 'remove'; id: string };
 export const articleReviewKey = new PluginKey<ReviewState>('articleReview');
 const empty: ReviewState = { items: [], activeId: null };
 
-/** Suggestions are data, never HTML, document marks, or executable model output. */
-export function parseArticleSuggestions(value: unknown): ArticleSuggestion[] {
-  if (!value || typeof value !== 'object' || !Array.isArray((value as { suggestions?: unknown }).suggestions)) throw new Error('建议格式无法识别，请重试；原文未修改。');
-  const result: ArticleSuggestion[] = [];
-  for (const raw of (value as { suggestions: unknown[] }).suggestions.slice(0, 30)) {
-    if (!raw || typeof raw !== 'object') continue;
-    const item = raw as Record<string, unknown>;
-    if (!['replace', 'emphasis', 'clarify'].includes(String(item.kind)) || typeof item.quote !== 'string' || !item.quote.trim() || item.quote.length > 500 || typeof item.reason !== 'string' || !item.reason.trim()) continue;
-    if (item.kind === 'replace' && (typeof item.replacement !== 'string' || !item.replacement.trim() || item.replacement.length > 1000 || /[\r\n]/.test(item.replacement) || item.replacement === item.quote)) continue;
-    result.push({ id: `review-${result.length + 1}`, kind: item.kind as ArticleSuggestion['kind'], quote: item.quote,
-      prefix: typeof item.prefix === 'string' ? item.prefix.slice(-200) : '', suffix: typeof item.suffix === 'string' ? item.suffix.slice(0, 200) : '',
-      replacement: item.kind === 'replace' ? item.replacement as string : null,
-      presentation: item.presentation === 'highlight' ? 'highlight' : 'bold', reason: item.reason.trim().slice(0, 180) });
-    if (result.length >= 10) break;
-  }
-  return result;
-}
 
 function safeRange(doc: DocumentNode, from: number, to: number, quote: string) {
   if (from < 1 || to > doc.content.size || from >= to) return false;
@@ -120,10 +95,36 @@ export function createArticleReviewPlugin(onChange?: (state: ReviewState) => voi
         return true;
       },
     },
-    view: () => ({ update(view, previous) {
-      const next = articleReviewKey.getState(view.state)!;
-      if (next !== articleReviewKey.getState(previous)) onChange?.(next);
-    } }),
+    view: view => {
+      const unregister = registerArticleReviewController(view, {
+        clear: () => view.dispatch(reviewTransaction(view.state, { type: 'set', items: [] })),
+        select(id, scroll) {
+          const tr = reviewTransaction(view.state, { type: 'select', id });
+          const item = articleReviewKey.getState(view.state)?.items.find(item => item.id === id);
+          if (scroll && item) tr.setSelection(TextSelection.create(view.state.doc, item.from, item.to)).scrollIntoView();
+          view.dispatch(tr);
+        },
+        locate: suggestions => locateArticleSuggestions(view.state.doc, suggestions),
+        set: items => view.dispatch(reviewTransaction(view.state, { type: 'set', items })),
+        adopt(id) {
+          const tr = applyArticleSuggestion(view.state, id);
+          if (!tr) return false;
+          // Keep each choice separate from adjacent typing and other choices in undo history.
+          view.dispatch(closeHistory(tr));
+          view.dispatch(closeHistory(view.state.tr).setMeta('addToHistory', false));
+          view.focus();
+          return true;
+        },
+        dismiss(id) { view.dispatch(reviewTransaction(view.state, { type: 'remove', id })); view.focus(); },
+      });
+      return {
+        update(view, previous) {
+          const next = articleReviewKey.getState(view.state)!;
+          if (next !== articleReviewKey.getState(previous)) onChange?.(next);
+        },
+        destroy: unregister,
+      };
+    },
   });
 }
 

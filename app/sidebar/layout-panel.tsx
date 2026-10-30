@@ -1,3 +1,5 @@
+import { findStyle } from '../../lib/styles';
+import { styleUseCases } from '../../lib/article-styles/visual-rules';
 import { StyleThumb } from './style-thumb';
 
 import { STYLE_ORDER, STYLE_FAMILY, STYLE_NAMES, STYLE_SUMMARY, HEADING_STYLES, EMOJI_CHOICES, EMOJI_NAMES, READING_PRESETS, DEFAULT_FONT_FAMILY, barPreview } from './shared';
@@ -6,7 +8,7 @@ import type { SidebarModel } from './controller';
 export function LayoutPanel({ model }: {
   model: SidebarModel;
 }) {
-  const { p, expanded, setExpanded, headingOpen, setHeadingOpen, emojiQuery, setEmojiQuery, brandOpen, setBrandOpen, brandName, setBrandName, brandNote, setBrandNote, follow, activePreset, heading, mode, visible, stylePaper, tinted } = model;
+  const { p, expanded, setExpanded, headingOpen, setHeadingOpen, emojiQuery, setEmojiQuery, brandOpen, setBrandOpen, brandName, setBrandName, brandNote, setBrandNote, activePreset, heading, visible, stylePaper, tinted } = model;
   return (
     <div className={"side-body"} id={"tab-layout"} hidden={p.tab !== "layout"}>
       <div className={"sec"}>
@@ -19,7 +21,7 @@ export function LayoutPanel({ model }: {
         </h3>
 
         <p className={"side-desc"}>
-          {"标题、段落和组件一起变化。"}
+          {"12 种本地风格，直接应用，无需配置 API。"}
         </p>
 
         <div className={"style-current"} id={"styleCurrent"}>
@@ -103,8 +105,8 @@ export function LayoutPanel({ model }: {
           </p>
 
           <div className={"style-meta-actions"}>
-            <button className={"mini-action"} id={"styleStructureBtn"} onClick={() => { p.onSay(p.styleGrammar || p.styles.find(x => x.id === p.styleId)?.grammar || '当前风格没有额外结构建议'); }}>
-              {"查看结构建议"}
+            <button className={"mini-action"} id={"styleStructureBtn"} onClick={() => { const style = findStyle(p.styleId); const scenario = styleUseCases[style.design]; p.onSay(style.preset ? `${style.preset.u}：${style.preset.why}` : `${scenario.audience}：${scenario.purpose}。${p.styleGrammar || style.grammar}`); }}>
+              {"查看风格特点"}
             </button>
             <button className={"mini-action"} id={"styleAccentReset"} onClick={() => { p.onAccentChange(p.styles.find(x => x.id === p.styleId)?.accent || p.accent); p.onFontColorChange?.(''); p.onSay('已恢复默认主题色和字体颜色'); }}>
               {"恢复默认色"}
@@ -180,7 +182,6 @@ export function LayoutPanel({ model }: {
           </div>
         </div>
 
-        <a className="mini-action" href="/style-preview" target="_blank" rel="noreferrer">12 套排版 · 对照试阅 ↗</a>
 
         <div className={"quick-style-list"} id={"quickStyleList"}>
           {STYLE_ORDER.map(id =>

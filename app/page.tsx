@@ -2,20 +2,19 @@
 import PlatformStatus from './platform-status';
 import { restoreApiProfiles } from '../lib/credential-client';
 
-import { prepareWechatPublication } from '../lib/wechat-publication';
-import { createArticleImagePackage } from '../lib/article-image-download';
+import { listPublicationImages, type PublicationImage } from '../lib/wechat-publication';
 
 import { useAppearanceState } from './workspace/use-appearance-state';
 import { useAiState } from './workspace/use-ai-state';
 import { useRequestScope } from './workspace/use-request-scope';
 import { useArticleAutosave } from './workspace/use-article-autosave';
+import { usePersistedSettings } from './workspace/use-persisted-settings';
+import { safeLocalStorage } from '../lib/browser-storage';
 import { ArticlePreview } from './workspace/article-preview';
 import { EditorToolbar } from './workspace/editor-toolbar';
 import { isImageTargetCurrent } from '../lib/ai-workbench';
 import { useAiActions } from './workspace/use-ai-actions';
 import { useArticleReview } from './workspace/use-article-review';
-import { ArticleReviewPopover } from './workspace/article-review-popover';
-import { AiRevisionDialog } from './workspace/ai-revision-dialog';
 import reviewUi from './workspace/article-review.module.css';
 import type { AiProviderId } from '../lib/providers';
 import { sample } from './workspace/sample-article';
@@ -23,19 +22,25 @@ import { normalizeHeadingStyle, barLabels, barPrefixes, normalizedPresetAppearan
 import React, { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './prototype-rebuild.css';
 import './neo-ux.css';
-import { getActiveArticleId, listArticles, rememberActiveArticle } from '../lib/storage';
+import { getActiveArticleId, getArticle, listArticleSummaries, rememberActiveArticle, toArticleSummary, type ArticleSummary } from '../lib/storage';
 import type { ArticleDocument, ArticleRecord } from '../lib/document';
 import { makeStandaloneHtml } from '../lib/export';
 import { importDocx } from '../lib/importers';
 import { wechatResourceNotice } from '../lib/wechat-resources';
-import { styles, getStyleComponentDefaults } from '../lib/styles';
+import { allStyles as styles, getStyleComponentDefaults } from '../lib/styles';
 import { resolveArticleHighlight } from '../lib/article-styles/highlight';
 import { listAssets, type LocalAsset } from '../lib/assets';
 import { normalizeMarkdownTables } from '../lib/ai-layout';
-import ApiSettings from './api-settings';
+import dynamic from 'next/dynamic';
+import { DeferredLoading } from './deferred-loading';
+
+const ArticleReviewPopover = dynamic(() => import('./workspace/article-review-popover').then(module => module.ArticleReviewPopover), { ssr: false });
+const AiRevisionDialog = dynamic(() => import('./workspace/ai-revision-dialog').then(module => module.AiRevisionDialog), { ssr: false });
+const ApiSettings = dynamic(() => import('./api-settings'), { loading: DeferredLoading });
 import { writeApiProfiles, type ApiProfile, type ApiProfileRoles } from '../lib/api-profiles';
-import { listGeneratedImages } from '../lib/generated-images';
-import RichEditor from './rich-editor';
+import { useGeneratedImageHistory } from './workspace/use-generated-image-history';
+import RichEditor from './deferred-rich-editor';
+import OfflineStatus from './workspace/offline-status';
 import { htmlToPlainText, markdownToWechat } from '../lib/wechat-html';
 import { enforceWechatCompliance } from '../lib/wechat-compliance';
 import V091Sidebar from './v091-sidebar';
@@ -56,7 +61,7 @@ type SavedStylePreset = { id: string; name: string; note: string; styleId: strin
 
 
 export default function Page() {
-  const [tab, setTab] = useState<Tab>('ai');
+  const [tab, setTab] = useState<Tab>('layout');
   const [ui, setUi] = useState<Ui>('neo2');
 
   useEffect(() => {
@@ -66,8 +71,6 @@ export default function Page() {
   const [mobileView, setMobileView] = useState<'styles' | 'edit' | 'preview'>('edit');
   const [content, setContent] = useState(sample);
   const { style, setStyle, accent, setAccent, markerColor, setMarkerColor, variant, setVariant, fontSize, setFontSize, lineHeight, setLineHeight, padX, setPadX, padY, setPadY, imageRadius, setImageRadius, paperMode, setPaperMode, paperColor, setPaperColor, paperTextureUrl, setPaperTextureUrl, paragraphGap, setParagraphGap, fontFamily, setFontFamily, fontColor, setFontColor, headingStyle, setHeadingStyle, headingIcon, setHeadingIcon, headingLabels, setHeadingLabels, headingPrefixes, setHeadingPrefixes, headingSeparators, setHeadingSeparators, headingNumberFormat, setHeadingNumberFormat } = useAppearanceState();
-  const [recentStyles, setRecentStyles] = useState<string[]>([]);
-  const [showAllStyles, setShowAllStyles] = useState(false);
   const headingLabelKey = `bar:${styles[style].id}`;
   const headingLabel = headingStyle === 'bar' ? headingLabels[headingLabelKey] ?? '' : '';
   const headingPrefix = headingPrefixes[styles[style].id] ?? '';
@@ -87,14 +90,14 @@ export default function Page() {
   const [editorAction, setEditorAction] = useState<'link' | 'image' | 'caption' | null>(null);
   const [editorActionValue, setEditorActionValue] = useState('');
   const editorActionSelectionRef = useRef<{ from: number; to: number } | null>(null);
-  const [planOptions, setPlanOptions] = useState<string[]>(['lead', 'divider', 'summary']);
   const [textBaseUrl, setTextBaseUrl] = useState('https://api.openai.com/v1');
   const [textApiKey, setTextApiKey] = useState('');
   const [unorderedMarker, setUnorderedMarker] = useState('disc');
   const [orderedMarker, setOrderedMarker] = useState('decimal');
   const [notice, setNotice] = useState('');
   const aiState = useAiState();
-  const { aiPhase, setAiPhase, aiRecommendation, setAiRecommendation, aiSummary, setAiSummary, aiTitleOptions, setAiTitleOptions, aiSuggestions, setAiSuggestions, aiImageBriefs, setAiImageBriefs, aiImageCards, setAiImageCards, savedGeneratedImages, setSavedGeneratedImages, aiRevision, setAiRevision, revisionInstruction, setRevisionInstruction, aiResultMode, setAiResultMode } = aiState;
+  const { aiPhase, setAiPhase, aiRecommendation, setAiRecommendation, aiSummary, aiTitleOptions, aiSuggestions, aiImageBriefs, aiImageCards, setAiImageCards, savedGeneratedImages, setSavedGeneratedImages, aiRevision, setAiRevision, revisionInstruction, setRevisionInstruction, aiResultMode } = aiState;
+  const imageHistory = useGeneratedImageHistory(setSavedGeneratedImages);
   useEffect(() => {
     // Successful AI application commits content and ready together; only pending work is reset.
     setAiPhase((phase) => phase === 'running' ? 'entry' : phase);
@@ -122,32 +125,27 @@ export default function Page() {
     setTextApiKey(textProfile?.apiKey || '');
     setTextBaseUrl(textProfile?.baseUrl || '');
   };
-  const [drafts, setDrafts] = useState<ArticleRecord[]>([]);
+  const [drafts, setDrafts] = useState<ArticleSummary[]>([]);
   const [articlesReady, setArticlesReady] = useState(false);
   const [activeArticleId, setActiveArticleId] = useState('');
   const initialArticleId = useRef('');
   const requestScope = useRequestScope(activeArticleId, content);
   const articleSession = useRef(0);
+  const editorRevision = useRef(0);
   const renderArticleSession = articleSession.current;
   const invalidateArticleRequests = () => { articleSession.current += 1; requestScope.invalidate(); articleReview.reset(); setAiPhase('entry'); setAiRevision(null); setAiImageCards([]); };
   useEffect(() => { if (activeArticleId) rememberActiveArticle(activeArticleId); }, [activeArticleId]);
   const [documentJson, setDocumentJson] = useState<ArticleDocument | null>(null);
   const [htmlToImport, setHtmlToImport] = useState('');
-  const [followTemplate, setFollowTemplate] = useState('minimal');
-  const [followTitle, setFollowTitle] = useState('关注我们');
-  const [followCopy, setFollowCopy] = useState('持续分享真正有用的内容');
-  const [followCta, setFollowCta] = useState('关注公众号');
-  const [followHref, setFollowHref] = useState('');
-  const [followMedia, setFollowMedia] = useState('');
   const [historyTick, setHistoryTick] = useState(0);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const richEditorRef = useRef<Editor | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
   const editorScrollRef = useRef<HTMLDivElement | null>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollLockRef = useRef(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const articleInputRef = useRef<HTMLInputElement>(null);
-  const followMediaInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>([sample]);
   const historyIndexRef = useRef(0);
   const restoringHistoryRef = useRef(false);
@@ -167,7 +165,7 @@ export default function Page() {
           ? styleDef.paper
           : '#ffffff';
   const editorHighlight = resolveArticleHighlight(styleDef.id, markerColor, '#ffffff', '#1b1b1b');
-  const wechatReading = {
+  const wechatReading = useMemo(() => ({
     fontSize,
     lineHeight,
     paragraphGap,
@@ -184,9 +182,8 @@ export default function Page() {
     variant,
     paper: resolvedPaper,
     paperTextureUrl,
-  };
-  const wechatPreviewHtml = useMemo(() => markdownToWechat(content, accent, markerColor, styleDef.id, padX, pixelLabel, wechatReading), [content, accent, markerColor, styleDef.id, padX, pixelLabel, fontSize, lineHeight, paragraphGap, padY, imageRadius, fontFamily, fontColor, headingStyle, headingIcon, headingLabel, headingPrefix, headingSeparator, headingNumberFormat, variant, resolvedPaper, paperTextureUrl]);
-  const sidebarStyles = useMemo(() => styles.map((item) => ({ id: item.id, name: item.name, grammar: item.grammar, accent: item.accent, paper: item.paper })), []);
+  }), [fontSize, lineHeight, paragraphGap, padY, imageRadius, fontFamily, fontColor, headingStyle, headingIcon, headingLabel, headingPrefix, headingSeparator, headingNumberFormat, variant, resolvedPaper, paperTextureUrl]);
+  const sidebarStyles = useMemo(() => styles.filter(item => item.preset).map((item) => ({ id: item.id, name: item.name, grammar: item.grammar, accent: item.accent, paper: item.paper })), []);
   const syncScroll = useCallback((source: 'editor' | 'preview', event: React.UIEvent<HTMLElement>) => {
     if (scrollLockRef.current) return;
     const from = event.currentTarget;
@@ -203,12 +200,14 @@ export default function Page() {
   const onPreviewScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => syncScroll('preview', event), [syncScroll]);
 
   const say = (text: string) => { setNotice(text); window.setTimeout(() => setNotice(''), 1600); };
-  const receiveEditorChange = useCallback((nextDocument: ArticleDocument, markdown: string) => {
+  const receiveEditorChange = useCallback((nextDocument: ArticleDocument, markdown: string, edited = false) => {
+    if (edited) editorRevision.current += 1;
     setDocumentJson(nextDocument);
     setContent(markdown);
   }, []);
   const receiveEditorReady = useCallback((editor: Editor | null) => {
     richEditorRef.current = editor;
+    setEditorReady(Boolean(editor));
   }, []);
   const openArticle = (article: ArticleRecord) => {
     flushArticle();
@@ -264,35 +263,11 @@ export default function Page() {
   const chooseStyle = (index: number) => { const reading = styles[index].reading; setStyle(index); setPaperMode('style');
     const picked = styles[index]?.id;
     if (picked) {
-      setRecentStyles((prev) => {
-        const next = [picked, ...prev.filter((id) => id !== picked)].slice(0, 4);
-        try { localStorage.setItem('kaipai.recentStyles', JSON.stringify(next)); } catch {}
-        return next;
-      });
       const skin = getStyleComponentDefaults(picked);
       setHeadingStyle(normalizeHeadingStyle(skin.headingStyle));
       setHeadingNumberFormat(skin.headingNumberFormat);
-      setFollowTemplate(skin.follow);
-      if (skin.follow === 'neo') {
-        setFollowTitle('订阅下一篇内容');
-        setFollowCopy('持续分享真正有用的内容');
-        setFollowCta('FOLLOW');
-      } else if (skin.follow === 'card') {
-        setFollowTitle('持续更新');
-        setFollowCopy('把有用的内容留给你');
-        setFollowCta('关注公众号');
-      } else if (skin.follow === 'brand') {
-        setFollowTitle('关注我们');
-        setFollowCopy('持续更新');
-        setFollowCta('关注公众号');
-      } else if (skin.follow === 'minimal') {
-        // UI form defaults only — never rewrite existing :::divider / :::follow in content
-        setFollowTitle('关注我们');
-        setFollowCopy('持续分享真正有用的内容');
-        setFollowCta('关注公众号');
-      }
     } setFontFamily(styles[index].typography.fontFamily); setFontColor(''); setParagraphGap(reading.paragraphGap ?? 20); setAccent(styles[index].accent); setFontSize(reading.fontSize); setLineHeight(reading.lineHeight); setPadX(reading.padX); setPadY(reading.padY); setImageRadius(reading.imageRadius); say(`已应用 ${styles[index].name}`); };
-  const { planError, pendingPlan, setPendingPlan, applyPlan, generateAiImage, runAiPlan, retryAiPlan, makeRevision, runAiTool, applyRevision } = useAiActions({
+  const { ignoreSuggestion, cancelPlan, toggleSuggestion, planError, pendingPlan, setPendingPlan, applyPlan, generateAiImage, runAiPlan, retryAiPlan, makeRevision, runAiTool, applyRevision } = useAiActions({
     state: aiState, content, articleId: activeArticleId, style, accent, apiProfiles, apiRoles, apiProvider, apiModel, textApiKey, textBaseUrl,
     assets, brandAvatarAssetId, brandQrAssetId, brandName, brandNote, requestScope,
     richEditorRef, chooseStyle, loadMarkdown, say, setApiOpen,
@@ -306,7 +281,7 @@ export default function Page() {
   });
 
   // A proposal belongs to the current article revision, never to another draft.
-  useEffect(() => { setPendingPlan(null); }, [activeArticleId, content]);
+  useEffect(() => { if (pendingPlan && pendingPlan.original !== content) setAiPhase('entry'); setPendingPlan(null); }, [activeArticleId, content]);
   const proposalPreview = useMemo(() => {
     if (!pendingPlan || pendingPlan.original !== content || aiPhase === 'running') return undefined;
     const selected = styles[pendingPlan.style];
@@ -321,19 +296,16 @@ export default function Page() {
   }, [pendingPlan, content, aiPhase, markerColor, pixelLabel, headingIcon, headingLabel, headingPrefix, headingSeparator, variant, paperTextureUrl]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('kaipai.recentStyles');
-      if (raw) setRecentStyles(JSON.parse(raw).filter((id: string) => styles.some((s) => s.id === id)).slice(0, 4));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
+    let disposed = false;
+    // Initial Markdown normalization is not a user edit and must not cancel saved-article recovery.
+    const restoreRevision = editorRevision.current;
     setAssets(listAssets());
-    listGeneratedImages().then(setSavedGeneratedImages).catch(() => setSavedGeneratedImages([]));
-    listArticles().then((articles) => {
+    listArticleSummaries(() => { if (!disposed) say('文稿暂未完整加载，请关闭旧标签页并刷新；本次编辑仍会尝试保存'); }).then(async (articles) => {
+      if (disposed) return;
       setDrafts(articles);
-      const active = articles.find((article) => article.id === getActiveArticleId()) || articles[0];
-      if (active && articleSession.current === 0) {
+      const summary = articles.find((article) => article.id === getActiveArticleId()) || articles[0];
+      const active = summary ? await getArticle(summary.id) : null;
+      if (!disposed && active && editorRevision.current === restoreRevision && articleSession.current === 0) {
         setActiveArticleId(active.id);
         rememberActiveArticle(active.id);
         const styleIndex = Math.max(0, styles.findIndex((item) => item.id === active.style));
@@ -352,72 +324,80 @@ export default function Page() {
         setDocumentJson(active.content);
         setContent(active.markdown || '');
       }
-    }).catch(() => setDrafts([])).finally(() => setArticlesReady(true));
-    const savedStyle = Number(localStorage.getItem('kaipai.community.style'));
+    }).catch(() => { if (!disposed) say('文稿恢复未完成，请刷新后重试；原存档未删除'); }).finally(() => { if (!disposed) setArticlesReady(true); });
+    const savedStyle = Number(safeLocalStorage.getItem('kaipai.community.style') ?? '12');
     if (Number.isInteger(savedStyle) && savedStyle >= 0 && savedStyle < styles.length) { setStyle(savedStyle); setAccent(styles[savedStyle].accent); }
-    const savedAccent = localStorage.getItem('kaipai.community.accent');
+    const savedAccent = safeLocalStorage.getItem('kaipai.community.accent');
     if (/^#[0-9a-f]{6}$/i.test(savedAccent || '')) setAccent(savedAccent!);
-    const savedMarker = localStorage.getItem('kaipai.community.marker');
+    const savedMarker = safeLocalStorage.getItem('kaipai.community.marker');
     if (/^#[0-9a-f]{6}$/i.test(savedMarker || '')) setMarkerColor(savedMarker!);
-    const savedUi = localStorage.getItem('kaipai.community.ui');
+    const savedUi = safeLocalStorage.getItem('kaipai.community.ui');
     if (savedUi === 'neo2' || savedUi === 'tactile') setUi(savedUi);
-    const savedVariant = localStorage.getItem('kaipai.community.variant');
+    const savedVariant = safeLocalStorage.getItem('kaipai.community.variant');
     if (savedVariant === '克制' || savedVariant === '标准' || savedVariant === '视觉化') setVariant(savedVariant);
-    const savedReading = localStorage.getItem('kaipai.community.reading');
+    const savedReading = safeLocalStorage.getItem('kaipai.community.reading');
     if (savedReading) { try { const reading = JSON.parse(savedReading); if (Number.isFinite(reading.fontSize)) setFontSize(reading.fontSize); if (Number.isFinite(reading.lineHeight)) setLineHeight(reading.lineHeight); if (Number.isFinite(reading.padX)) setPadX(reading.padX); if (Number.isFinite(reading.padY)) setPadY(reading.padY); if (Number.isFinite(reading.imageRadius)) setImageRadius(reading.imageRadius); if (Number.isFinite(reading.paragraphGap)) setParagraphGap(reading.paragraphGap); if (typeof reading.fontFamily === 'string' && reading.fontFamily) setFontFamily(reading.fontFamily); } catch { /* ignore malformed local data */ } }
-    const savedHeading = localStorage.getItem('kaipai.community.heading');
+    const savedHeading = safeLocalStorage.getItem('kaipai.community.heading');
     if (savedHeading) setHeadingStyle(normalizeHeadingStyle(savedHeading));
-    const savedHeadingIcon = localStorage.getItem('kaipai.community.heading-icon');
+    const savedHeadingIcon = safeLocalStorage.getItem('kaipai.community.heading-icon');
     if (savedHeadingIcon !== null && savedHeadingIcon.length <= 4) setHeadingIcon(savedHeadingIcon || '◆');
-    const savedHeadingLabel = localStorage.getItem('kaipai.community.heading-label');
-    const savedHeadingLabels = localStorage.getItem('kaipai.community.heading-labels');
+    const savedHeadingLabel = safeLocalStorage.getItem('kaipai.community.heading-label');
+    const savedHeadingLabels = safeLocalStorage.getItem('kaipai.community.heading-labels');
     if (savedHeadingLabels) { try { setHeadingLabels(barLabels(JSON.parse(savedHeadingLabels), savedHeadingLabel || '', styles[Number.isInteger(savedStyle) && savedStyle >= 0 && savedStyle < styles.length ? savedStyle : 0].id)); } catch { /* ignore malformed local data */ } }
     else if (savedHeadingLabel !== null) setHeadingLabels({ [`bar:${styles[Number.isInteger(savedStyle) && savedStyle >= 0 && savedStyle < styles.length ? savedStyle : 0].id}`]: savedHeadingLabel.slice(0, 12) });
-    const savedHeadingPrefixes = localStorage.getItem('kaipai.community.heading-prefixes');
+    const savedHeadingPrefixes = safeLocalStorage.getItem('kaipai.community.heading-prefixes');
     if (savedHeadingPrefixes) { try { setHeadingPrefixes(barPrefixes(JSON.parse(savedHeadingPrefixes))); } catch { /* ignore malformed local data */ } }
-    const savedHeadingSeparators = localStorage.getItem('kaipai.community.heading-separators');
+    const savedHeadingSeparators = safeLocalStorage.getItem('kaipai.community.heading-separators');
     if (savedHeadingSeparators) { try { setHeadingSeparators(barPrefixes(JSON.parse(savedHeadingSeparators))); } catch { /* ignore malformed local data */ } }
-    const savedHeadingNumberFormat = localStorage.getItem('kaipai.community.heading-number-format');
+    const savedHeadingNumberFormat = safeLocalStorage.getItem('kaipai.community.heading-number-format');
     if (savedHeadingNumberFormat === '01' || savedHeadingNumberFormat === '1' || savedHeadingNumberFormat === '一' || savedHeadingNumberFormat === 'none') setHeadingNumberFormat(savedHeadingNumberFormat);
-    const savedEyebrow = localStorage.getItem('kaipai.community.eyebrow');
+    const savedEyebrow = safeLocalStorage.getItem('kaipai.community.eyebrow');
     if (savedEyebrow !== null) setPixelLabel(savedEyebrow);
-    const savedBrand = localStorage.getItem('kaipai.community.brand');
-    if (savedBrand) { try { const brand = JSON.parse(savedBrand); if (typeof brand.name === 'string') setBrandName(brand.name); if (typeof brand.note === 'string') setBrandNote(brand.note); if (typeof brand.avatarAssetId === 'string') setBrandAvatarAssetId(brand.avatarAssetId); if (typeof brand.qrAssetId === 'string') setBrandQrAssetId(brand.qrAssetId); } catch { localStorage.removeItem('kaipai.community.brand'); } }
+    const savedBrand = safeLocalStorage.getItem('kaipai.community.brand');
+    if (savedBrand) { try { const brand = JSON.parse(savedBrand); if (typeof brand.name === 'string') setBrandName(brand.name); if (typeof brand.note === 'string') setBrandNote(brand.note); if (typeof brand.avatarAssetId === 'string') setBrandAvatarAssetId(brand.avatarAssetId); if (typeof brand.qrAssetId === 'string') setBrandQrAssetId(brand.qrAssetId); } catch { safeLocalStorage.removeItem('kaipai.community.brand'); } }
     try {
-      const rawPresets = JSON.parse(localStorage.getItem('kaipai.community.saved-styles') || '[]');
+      const rawPresets = JSON.parse(safeLocalStorage.getItem('kaipai.community.saved-styles') || '[]');
       if (Array.isArray(rawPresets)) setSavedStylePresets(rawPresets.filter((item): item is SavedStylePreset => Boolean(item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.styleId === 'string' && item.appearance && typeof item.appearance === 'object')).map((item) => ({ ...item, appearance: normalizedPresetAppearance(item.appearance, item.styleId) })));
-      setActiveSavedStyleId(localStorage.getItem('kaipai.community.active-saved-style') || '');
+      setActiveSavedStyleId(safeLocalStorage.getItem('kaipai.community.active-saved-style') || '');
     } catch { /* ignore malformed saved style data */ }
     setSavedStylesReady(true);
     const revision = ++profileRevision.current;
     void restoreApiProfiles().then(saved => {
       if (revision === profileRevision.current) applyApiProfiles(saved.profiles, saved.roles);
     }).catch(() => { if (revision === profileRevision.current) say('旧 API 配置未能安全恢复，请打开 AI 服务配置重新填写；原配置尚未删除。'); });
-    const savedUnordered = localStorage.getItem('kaipai.community.unordered-marker');
+    const savedUnordered = safeLocalStorage.getItem('kaipai.community.unordered-marker');
     if (['disc', 'circle', 'square'].includes(savedUnordered || '')) setUnorderedMarker(savedUnordered!);
-    const savedOrdered = localStorage.getItem('kaipai.community.ordered-marker');
+    const savedOrdered = safeLocalStorage.getItem('kaipai.community.ordered-marker');
     if (['decimal', 'lower-alpha', 'upper-alpha', 'lower-roman', 'upper-roman'].includes(savedOrdered || '')) setOrderedMarker(savedOrdered!);
+    return () => { disposed = true; };
   }, []);
-  useEffect(() => { localStorage.setItem('kaipai.community.style', String(style)); }, [style]);
-  useEffect(() => { localStorage.setItem('kaipai.community.accent', accent); }, [accent]);
-  useEffect(() => { localStorage.setItem('kaipai.community.marker', markerColor); }, [markerColor]);
-  useEffect(() => { localStorage.setItem('kaipai.community.ui', ui); }, [ui]);
-  useEffect(() => { localStorage.setItem('kaipai.community.variant', variant); }, [variant]);
-  useEffect(() => { localStorage.setItem('kaipai.community.reading', JSON.stringify({ fontSize, lineHeight, padX, padY, imageRadius, paragraphGap, fontFamily })); }, [fontSize, lineHeight, padX, padY, imageRadius, paragraphGap, fontFamily]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading', headingStyle); }, [headingStyle]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-icon', headingIcon); }, [headingIcon]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-label', headingLabel); }, [headingLabel]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-labels', JSON.stringify(headingLabels)); }, [headingLabels]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-prefixes', JSON.stringify(headingPrefixes)); }, [headingPrefixes]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-separators', JSON.stringify(headingSeparators)); }, [headingSeparators]);
-  useEffect(() => { localStorage.setItem('kaipai.community.heading-number-format', headingNumberFormat); }, [headingNumberFormat]);
-  useEffect(() => { localStorage.setItem('kaipai.community.eyebrow', pixelLabel); }, [pixelLabel]);
-  useEffect(() => { localStorage.setItem('kaipai.community.brand', JSON.stringify({ name: brandName, note: brandNote, avatarAssetId: brandAvatarAssetId, qrAssetId: brandQrAssetId })); }, [brandName, brandNote, brandAvatarAssetId, brandQrAssetId]);
-  useEffect(() => { if (savedStylesReady) localStorage.setItem('kaipai.community.saved-styles', JSON.stringify(savedStylePresets)); }, [savedStylesReady, savedStylePresets]);
-  useEffect(() => { if (savedStylesReady) localStorage.setItem('kaipai.community.active-saved-style', activeSavedStyleId); }, [savedStylesReady, activeSavedStyleId]);
-  useEffect(() => { localStorage.setItem('kaipai.community.unordered-marker', unorderedMarker); }, [unorderedMarker]);
-  useEffect(() => { localStorage.setItem('kaipai.community.ordered-marker', orderedMarker); }, [orderedMarker]);
+  const persistedSettings = useMemo(() => ({
+    'kaipai.community.style': String(style),
+    'kaipai.community.accent': accent,
+    'kaipai.community.marker': markerColor,
+    'kaipai.community.ui': ui,
+    'kaipai.community.variant': variant,
+    'kaipai.community.reading': JSON.stringify({ fontSize, lineHeight, padX, padY, imageRadius, paragraphGap, fontFamily }),
+    'kaipai.community.heading': headingStyle,
+    'kaipai.community.heading-icon': headingIcon,
+    'kaipai.community.heading-label': headingLabel,
+    'kaipai.community.heading-labels': JSON.stringify(headingLabels),
+    'kaipai.community.heading-prefixes': JSON.stringify(headingPrefixes),
+    'kaipai.community.heading-separators': JSON.stringify(headingSeparators),
+    'kaipai.community.heading-number-format': headingNumberFormat,
+    'kaipai.community.eyebrow': pixelLabel,
+    'kaipai.community.brand': JSON.stringify({ name: brandName, note: brandNote, avatarAssetId: brandAvatarAssetId, qrAssetId: brandQrAssetId }),
+    'kaipai.community.saved-styles': JSON.stringify(savedStylePresets),
+    'kaipai.community.active-saved-style': activeSavedStyleId,
+    'kaipai.community.unordered-marker': unorderedMarker,
+    'kaipai.community.ordered-marker': orderedMarker,
+  }), [style, accent, markerColor, ui, variant, fontSize, lineHeight, padX, padY, imageRadius, paragraphGap, fontFamily, headingStyle, headingIcon, headingLabel, headingLabels, headingPrefixes, headingSeparators, headingNumberFormat, pixelLabel, brandName, brandNote, brandAvatarAssetId, brandQrAssetId, savedStylePresets, activeSavedStyleId, unorderedMarker, orderedMarker]);
+  usePersistedSettings(persistedSettings, savedStylesReady && articlesReady, () => say('浏览器未能保存设置；可继续编辑，请检查存储空间或权限'));
   useEffect(() => {
+    if (richEditorRef.current) {
+      historyRef.current = [content]; historyIndexRef.current = 0; restoringHistoryRef.current = false;
+      return;
+    }
     if (restoringHistoryRef.current) { restoringHistoryRef.current = false; return; }
     const history = historyRef.current;
     const index = historyIndexRef.current;
@@ -448,7 +428,7 @@ export default function Page() {
     setDrafts((items) => {
       const current = items.find((item) => item.id === article.id);
       if (current && current.updatedAt > article.updatedAt) return items;
-      return [article, ...items.filter((item) => item.id !== article.id)].sort((a, b) => b.updatedAt - a.updatedAt);
+      return [toArticleSummary(article), ...items.filter((item) => item.id !== article.id)].sort((a, b) => b.updatedAt - a.updatedAt);
     });
   }, () => say('文稿保存失败，请检查浏览器存储空间'));
 
@@ -688,28 +668,6 @@ export default function Page() {
     else setContent(tidy);
     say('已整理空行');
   };
-  const chooseFollowTemplate = (id: string, title: string, copy: string, cta: string) => {
-    const defaultAssetId = id === 'qr' ? brandQrAssetId : id === 'avatar' ? brandAvatarAssetId : '';
-    const defaultAsset = assets.find((asset) => asset.id === defaultAssetId);
-    setFollowTemplate(id); setFollowTitle(title); setFollowCopy(copy); setFollowCta(cta);
-    if (defaultAsset) setFollowMedia(defaultAsset.url);
-    say(defaultAsset ? `已选择模板并带入「${defaultAsset.name}」` : `已选择「${id === 'minimal' ? '极简' : id === 'brand' ? '品牌色' : id === 'card' ? '轻卡片' : id === 'neo' ? '粗犷' : id === 'qr' ? '二维码型' : id === 'avatar' ? '作者头像型' : id === 'split' ? '左图右文型' : '公众号名片型'}」模板`);
-  };
-  const readFollowMedia = async (event: ChangeEvent<HTMLInputElement>) => {
-    const input = event.currentTarget;
-    const file = input.files?.[0]; if (!file) return;
-    const isCurrent = requestScope.begin('follow-media');
-    const source = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
-    input.value = '';
-    if (!isCurrent()) return;
-    setFollowMedia(source); say('已载入关注组件图片');
-  };
-  const insertFollow = () => {
-    const safe = (value: string) => value.replace(/\|/g, '／').replace(/\n/g, ' ');
-    const defaultAssetId = followTemplate === 'qr' ? brandQrAssetId : followTemplate === 'avatar' ? brandAvatarAssetId : '';
-    const source = followMedia || assets.find((asset) => asset.id === defaultAssetId)?.url || '';
-    apply(`:::follow\n${safe(followTemplate)}|${safe(followTitle)}|${safe(followCopy)}|${safe(followCta)}|${safe(source)}|${safe(followHref)}\n:::`);
-  };
   const restoreHistory = (direction: -1 | 1) => {
     const nextIndex = historyIndexRef.current + direction;
     if (nextIndex < 0 || nextIndex >= historyRef.current.length) { say(direction < 0 ? '已经是最早的编辑状态' : '已经是最新的编辑状态'); return; }
@@ -752,6 +710,21 @@ export default function Page() {
     }
     return ok && wrote;
   };
+  const copyPreparedHtml = async (html: string, hasImages = false): Promise<boolean> => {
+    const plain = htmlToPlainText(html);
+    try {
+      if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') throw new Error('rich clipboard unavailable');
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([plain], { type: 'text/plain' }) })]);
+    } catch {
+      if (!copyExactHtml(html, plain)) {
+        if (hasImages) { say('图片已准备好，请点击“复制完整图文”完成复制'); return false; }
+        try { await navigator.clipboard.writeText(plain); say('已复制纯文本；当前浏览器未支持富文本剪贴板'); return true; }
+        catch { say('浏览器未授权剪贴板，请重试复制'); return false; }
+      }
+    }
+    say(hasImages ? '排版已复制；本地图片请使用楷排插件转存到微信后再粘贴' : '正文已复制；请在微信后台保存并预览检查');
+    return true;
+  };
   const copy = async () => {
     const rawHtml = markdownToWechat(content, accent, markerColor, styleDef.id, padX, pixelLabel, wechatReading);
     const gated = enforceWechatCompliance(rawHtml);
@@ -762,36 +735,14 @@ export default function Page() {
       say(`公众号合规未通过：${where} ${why}（未复制）`);
       return;
     }
-    const publication = prepareWechatPublication(gated.html);
-    const html = publication.html;
-    const plain = htmlToPlainText(html);
-    const copied = () => say(publication.images.length
-      ? '正文已复制；待上传位置已标出，请下载图片并在公众号后台上传'
-      : '正文已复制，请在微信后台保存并预览检查');
-    try {
-      if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') throw new Error('rich clipboard unavailable');
-      await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
-        'text/plain': new Blob([plain], { type: 'text/plain' }),
-      })]);
-      copied();
-    } catch {
-      if (copyExactHtml(html, plain)) { copied(); return; }
-      try {
-        if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
-        await navigator.clipboard.writeText(plain);
-        say('已复制纯文本；当前浏览器未支持富文本剪贴板');
-      } catch {
-        say('浏览器未授权剪贴板，请重试复制');
-      }
-    }
+    await copyPreparedHtml(gated.html, /<img\b|url\s*\(/i.test(gated.html));
   };
-  const downloadArticleImages = async () => {
-    const html = markdownToWechat(content, accent, markerColor, styleDef.id, padX, pixelLabel, wechatReading);
-    const images = prepareWechatPublication(html).images;
-    if (!images.length) { say('没有需要上传的图片'); return; }
+  const downloadArticleImages = async (copiedImages?: PublicationImage[]) => {
+    const images = copiedImages || listPublicationImages(markdownToWechat(content, accent, markerColor, styleDef.id, padX, pixelLabel, wechatReading));
+    if (!images.length) { say('没有需要上传的图片'); return { error: '没有需要上传的图片' }; }
     say('正在准备图片下载包…');
     try {
+      const { createArticleImagePackage } = await import('../lib/article-image-download');
       const result = await createArticleImagePackage(images);
       const url = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
@@ -800,14 +751,12 @@ export default function Page() {
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       say(result.failed ? `已下载 ${result.count} 张图片；${result.failed} 张失败，详见包内说明` : `已下载 ${result.count} 张图片与图注，请按编号在公众号后台上传`);
+      return { count: result.count, failed: result.failed };
     } catch (error) {
-      say(error instanceof Error ? error.message : '图片下载失败，请重试');
+      const message = error instanceof Error ? error.message : '图片下载失败，请重试';
+      say(message);
+      return { error: message };
     }
-  };
-  const copyImageBriefs = async () => {
-    const text = aiImageBriefs.map((brief, index) => `${index + 1}. ${brief}`).join('\n');
-    if (!text) { say('请先生成配图建议'); return; }
-    try { await navigator.clipboard.writeText(text); say('已复制配图方向'); } catch { say('浏览器未授权剪贴板，请手动复制'); }
   };
   const download = (filename: string, body: string, type: string) => {
     const link = document.createElement('a');
@@ -874,9 +823,9 @@ export default function Page() {
 
   return <main id="kaipai-studio" className={`v091-app kaipai-studio v091-${ui} v091-mobile-${mobileView}`} data-ui={ui === "tactile" ? "tactile" : "neo2"}>
     <header className="v091-topbar">
-      <div className="v091-brand"><b>楷</b><span><strong>楷排 <i>v0.91</i></strong><small>AI PUBLISHING WORKSPACE</small></span></div>
-      <button className={`v091-top-chip v091-api-status ${apiProvider !== '本地模拟' && textApiKey ? 'connected' : 'disconnected'}`} onClick={() => setApiOpen(true)}><span className="v091-api-indicator" aria-hidden="true" />API {apiProvider === '本地模拟' ? '本地模拟' : textApiKey ? '已配置' : '未配置'}</button>
-      <div className="v091-top-actions"><label className="v091-btn">↥ 导入<input ref={articleInputRef} type="file" accept=".md,.markdown,.txt,.html,.htm,.docx" onChange={importFile} /></label><button className="v091-btn studio-copy" disabled={tab === 'ai' && Boolean(proposalPreview)} title={tab === 'ai' && proposalPreview ? '请先应用排版或保留原文' : undefined} onClick={copy}>⧉ 复制公众号</button><button className="v091-btn" onClick={downloadArticleImages}>↓ 下载图片</button><button className="v091-btn" disabled={tab === 'ai' && Boolean(proposalPreview)} onClick={exportWechatHtml}>↓ 导出 HTML</button><button className="v091-btn" onClick={() => download(`${content.split('\n').find(Boolean)?.replace(/^#+\s*/, '') || '楷排文章'}.md`, content, 'text/markdown;charset=utf-8')}>↓ 导出 Markdown</button><button className="v091-top-help" aria-label="使用帮助" onClick={() => setHelpOpen(true)}>?</button></div>
+      <div className="v091-brand"><b>楷</b><span><strong>楷排 <i>v0.91</i></strong><small>ARTICLE LAYOUT WORKSPACE</small></span></div>
+      <button className={`v091-top-chip v091-api-status ${apiProvider !== '本地模拟' && textApiKey ? 'connected' : 'disconnected'}`} onClick={() => setApiOpen(true)}><span className="v091-api-indicator" aria-hidden="true" />AI {apiProvider === '本地模拟' || !textApiKey ? '可选 · 未连接' : '已配置'}</button>
+      <div className="v091-top-actions"><label className="v091-btn">↥ 导入<input ref={articleInputRef} type="file" accept=".md,.markdown,.txt,.html,.htm,.docx" onChange={importFile} /></label><button className="v091-btn studio-copy" disabled={tab === 'ai' && Boolean(proposalPreview)} title={tab === 'ai' && proposalPreview ? '请先应用排版或保留原文' : undefined} onClick={copy}>⧉ 复制公众号</button><button className="v091-btn" onClick={() => void downloadArticleImages()}>↓ 下载图片</button><button className="v091-btn" disabled={tab === 'ai' && Boolean(proposalPreview)} onClick={exportWechatHtml}>↓ 导出 HTML</button><button className="v091-btn" onClick={() => download(`${content.split('\n').find(Boolean)?.replace(/^#+\s*/, '') || '楷排文章'}.md`, content, 'text/markdown;charset=utf-8')}>↓ 导出 Markdown</button><button className="v091-top-help" aria-label="使用帮助" onClick={() => setHelpOpen(true)}>?</button></div>
     </header>
     <nav className="v091-mobile-switch" aria-label="移动端面板切换">
       {([{ id: 'styles', text: '样式' }, { id: 'edit', text: '编辑' }, { id: 'preview', text: '预览' }] as const).map((item) => (
@@ -891,7 +840,7 @@ export default function Page() {
     </nav>
     <section className="v091-workspace workspace">
       <V091Sidebar
-        coverContext={{ article: content, articleId: activeArticleId, profiles: apiProfiles, roles: apiRoles, savedImages: savedGeneratedImages, configure: () => setApiOpen(true), onSaved: image => setSavedGeneratedImages(items => [image, ...items.filter(item => item.id !== image.id)].slice(0, 12)) }}
+        coverContext={{ article: content, articleId: activeArticleId, profiles: apiProfiles, roles: apiRoles, configure: () => setApiOpen(true), onSaved: image => setSavedGeneratedImages(items => [image, ...items.filter(item => item.id !== image.id)]) }}
         tab={tab === 'components' ? 'styles' : tab}
         onTabChange={(next) => setTab(next === 'styles' ? 'components' : next)}
         styles={sidebarStyles}
@@ -943,8 +892,19 @@ export default function Page() {
         }}
         drafts={drafts.map((d) => ({ id: d.id, title: d.title, updatedAt: d.updatedAt }))}
         onOpenDraft={(id) => {
-          const draft = drafts.find((item) => item.id === id);
-          if (draft) openArticle(draft);
+          if (id === activeArticleId) return;
+          const request = requestScope.begin('open-article');
+          void (async () => {
+            try {
+              await flushArticle();
+              if (!request()) return;
+              const draft = await getArticle(id);
+              if (!request()) return;
+              if (draft) openArticle(draft);
+              else say('这篇文稿暂时无法读取，请刷新后重试');
+            } catch { if (request()) say('文稿读取失败，当前文章保持不变'); }
+            finally { request.finish(); }
+          })();
         }}
         onCreateDraft={() => createArticle()}
         onLoadSample={() => createArticle(sample)}
@@ -959,19 +919,31 @@ export default function Page() {
         onRunAiTool={runAiTool}
         onApplyAiPlan={() => applyPlan()}
         aiHasPendingPlan={Boolean(proposalPreview)}
+        aiLayoutReview={pendingPlan?.review}
+        aiSelectedSuggestions={pendingPlan?.selected}
+        aiSelectionError={pendingPlan?.selectionError}
+        onToggleSuggestion={toggleSuggestion}
+        onIgnoreSuggestion={ignoreSuggestion}
         onDiscardAiPlan={() => { setPendingPlan(null); setAiPhase('entry'); say('已保留原文'); }}
         onRetryAiPlan={retryAiPlan}
         onPlanStyleChange={(id) => { const index = styles.findIndex(item => item.id === id); if (index >= 0) { setPendingPlan(plan => plan ? { ...plan, style: index } : plan); setAiRecommendation(index); } }}
         onCopyArticle={copy}
         onDownloadImages={downloadArticleImages}
-        onCancelAiPlan={() => { requestScope.cancel('plan'); setAiPhase('entry'); }}
+        onCancelAiPlan={cancelPlan}
         aiPlanError={planError}
         aiSummary={aiSummary}
         aiSuggestions={aiSuggestions}
         aiImageBriefs={aiImageBriefs}
         aiImageCards={aiImageCards}
         aiSavedImages={savedGeneratedImages}
-        onPreviewSavedImage={(id) => { const image = savedGeneratedImages.find((item) => item.id === id); if (image) { setAiImageCards([{ id: crypto.randomUUID(), brief: image.brief, prompt: image.prompt, src: image.src, status: 'done' }]); say('已打开配图预览，确认图注后可插入文章'); } }}
+        aiImageHistoryLoading={imageHistory.loading}
+        aiImageHistoryHasMore={imageHistory.hasMore}
+        aiImageHistoryError={imageHistory.error}
+        onLoadMoreSavedImages={imageHistory.loadMore}
+        aiImageHistoryDeletingId={imageHistory.deletingId}
+        aiImageHistoryDeleteError={imageHistory.deleteError}
+        onDeleteSavedImage={imageHistory.removeImage}
+        onPreviewSavedImage={(id) => { const image = savedGeneratedImages.find(item => item.id === id); if (image) { setAiImageCards([{ id: crypto.randomUUID(), brief: image.brief, prompt: image.prompt, src: image.src, status: 'done' }]); say('已打开历史图片，可编辑图注与画面要求；重新生成需连接模型'); } }}
         onGenerateAiImage={(id, prompt, ratios, visualStyle, imageText) => {
           const isCurrent = requestScope.begin(`image-batch:${id}`);
           const card = aiImageCards.find(item => item.id === id);
@@ -980,10 +952,12 @@ export default function Page() {
           const variants = ratios.map(ratio => ({ ...card, prompt: basePrompt, ratio, visualStyle, imageText, id: crypto.randomUUID(), src: '', status: 'idle' as const, error: '' }));
           setAiImageCards(items => items.flatMap(item => item.id === id ? variants : [item]));
           void (async () => {
-            for (let i = 0; i < variants.length; i++) {
-              if (!isCurrent()) return;
-              await generateAiImage(variants[i].id, variants[i].brief, `${basePrompt}\n图片内文字：${imageText || '禁止文字'}`, ratios[i], visualStyle);
-            }
+            try {
+              for (let i = 0; i < variants.length; i++) {
+                if (!isCurrent()) return;
+                await generateAiImage(variants[i].id, variants[i].brief, `${basePrompt}\n图片内文字：${imageText || '禁止文字'}`, ratios[i], visualStyle);
+              }
+            } finally { isCurrent.finish(); }
           })();
         }}
         onInsertAiImage={(src, brief, target) => {
@@ -1054,23 +1028,23 @@ export default function Page() {
       
       <section className="v091-pane v091-editor">
         <header className={reviewUi.header}><b>文章内容 <small>直接粘贴正文 · Markdown 自动识别</small></b><div className={reviewUi.tools}>
-          <button className={reviewUi.check} onClick={() => { setPendingPlan(null); setAiRevision(null); void articleReview.run(); }} disabled={articleReview.phase === 'running' || aiPhase === 'running'}>{articleReview.phase === 'running' ? '正在检查…' : '检查文章'}</button>
+          <button className={reviewUi.check} onClick={() => { setPendingPlan(null); setAiRevision(null); void articleReview.run(); }} disabled={articleReview.phase === 'running' || aiPhase === 'running'}>{articleReview.phase === 'running' ? '正在检查…' : 'AI 检查文章'}</button>
           {!!articleReview.review.items.length && <button onClick={articleReview.next}>查看建议 · {articleReview.review.items.length}</button>}
           <button onClick={() => { loadMarkdown(sample); say('已载入完整示例'); }}>载入完整示例</button>
         </div></header>
         {(articleReview.message || articleReview.phase === 'running') && <div className={reviewUi.status} role={articleReview.phase === 'error' ? 'alert' : 'status'}>
-          <p>{articleReview.phase === 'running' ? '正在阅读全文，检查完成后点击正文虚线查看建议。' : articleReview.phase === 'ready' && articleReview.review.items.length ? `${apiProvider === '本地模拟' ? '本地演示 · ' : ''}还有 ${articleReview.review.items.length} 处建议，点击正文虚线查看。` : articleReview.phase === 'ready' && articleReview.message.includes('处建议') ? '当前没有待处理建议。可继续编辑或重新检查。' : articleReview.message}</p>
+          <p>{articleReview.phase === 'running' ? '正在阅读全文，检查完成后点击正文虚线查看建议。' : articleReview.phase === 'ready' && articleReview.review.items.length ? `还有 ${articleReview.review.items.length} 处建议，点击正文虚线查看。` : articleReview.phase === 'ready' && articleReview.message.includes('处建议') ? '当前没有待处理建议。可继续编辑或重新检查。' : articleReview.message}</p>
           {articleReview.phase === 'running' && <button onClick={articleReview.cancel}>取消</button>}
         </div>}
-        <EditorToolbar onPolish={() => void runAiTool('polish')} format={format} apply={apply} insertLink={insertLink} openEditorAction={openEditorAction}
+        <fieldset disabled={!editorReady} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}><EditorToolbar onPolish={() => void runAiTool('polish')} format={format} apply={apply} insertLink={insertLink} openEditorAction={openEditorAction}
           editImageCaption={editImageCaption} insertTable={insertTable} canUndo={canUndo} canRedo={canRedo}
           undoEditor={undoEditor} clearFormat={clearFormat} tidyDocument={tidyDocument}
           onInsertImage={() => imageInputRef.current?.click()}
-          onHorizontalRule={() => { if (richEditorRef.current) { richEditorRef.current.chain().focus().setHorizontalRule().run(); return; } apply('---'); }} />
+          onHorizontalRule={() => { if (richEditorRef.current) { richEditorRef.current.chain().focus().setHorizontalRule().run(); return; } apply('---'); }} /></fieldset>
         {editorAction && <form className="v091-editor-action" onSubmit={(event) => { event.preventDefault(); submitEditorAction(); }}><label>{editorAction === 'link' ? '输入链接地址' : editorAction === 'image' ? '输入图片地址' : '编辑图片说明'}<input autoFocus value={editorActionValue} onChange={(event) => setEditorActionValue(event.target.value)} placeholder={editorAction === 'caption' ? '写一句图片说明' : 'https://...'} /></label><button type="submit">确认</button><button type="button" onClick={() => setEditorAction(null)}>取消</button></form>}
         <input ref={imageInputRef} className="v091-hidden-input" type="file" accept="image/*" onChange={insertImage} />
         <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={activeArticleId || 'initial'} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onReviewState={articleReview.setReview} /></div>
-        <ArticleReviewPopover editor={richEditorRef.current} item={articleReview.active} onAdopt={articleReview.adopt} onIgnore={articleReview.dismiss} onClose={() => articleReview.select(null)} />
+        {articleReview.active && <ArticleReviewPopover editor={richEditorRef.current} item={articleReview.active} onAdopt={articleReview.adopt} onIgnore={articleReview.dismiss} onClose={() => articleReview.select(null)} />}
         {aiRevision && <AiRevisionDialog label={aiRevision.kind === 'title' ? '标题建议对照' : '润色对照'} onClose={() => { requestScope.cancel('revision'); setAiRevision(null); }}>
           <div className="ai-revision-head"><b>{aiRevision.kind === 'title' ? '标题建议' : '润色批改'}</b><button type="button" onClick={() => { requestScope.cancel('revision'); setAiRevision(null); }} aria-label="关闭批改框">×</button></div>
           <div className="ai-revision-compare"><div><small>原文</small><p>{aiRevision.original}</p></div><div><small>建议版本</small><textarea value={aiRevision.proposal} onChange={(event) => setAiRevision((current) => current ? { ...current, proposal: event.target.value } : current)} placeholder={aiRevision.status === 'running' ? '正在生成建议…' : '这里可以直接修改建议'} /></div></div>
@@ -1081,11 +1055,11 @@ export default function Page() {
         </AiRevisionDialog>}
         <textarea className="v091-legacy-source" ref={editorRef} aria-label="Markdown 源文稿" value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); } }} tabIndex={-1} />
       </section>
-      <ArticlePreview styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
+      <ArticlePreview key={activeArticleId || 'initial'} styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
         background={paperMode === 'follow' ? undefined : paperMode === 'custom' ? paperColor : styleDef.paper || '#ffffff'}
         proposal={tab === 'ai' ? proposalPreview : undefined}
-        html={wechatPreviewHtml} scrollRef={previewScrollRef} onScroll={onPreviewScroll} />
+        markdown={content} accent={accent} marker={markerColor} sidePadding={padX} eyebrow={pixelLabel} reading={wechatReading} scrollRef={previewScrollRef} onScroll={onPreviewScroll} />
     </section>
-    <footer><span>{wordCount} 字</span><span>约 {readMinutes} 分钟</span><span>{codeCount} 个代码块</span><span>{imageCount} 张图</span><span>文章保存在本机</span><PlatformStatus /></footer>{apiOpen && <ApiSettings profiles={apiProfiles} roles={apiRoles} onClose={() => setApiOpen(false)} onChange={(profiles, roles) => { applyApiProfiles(profiles, roles); say('API 配置已更新'); }} />}{helpOpen && <div className="v091-modal-backdrop" role="dialog" aria-modal="true" aria-label="使用说明"><section className="v091-local-api-modal v091-help-modal"><button className="v091-modal-close" onClick={() => setHelpOpen(false)} aria-label="关闭">×</button><small>KAIPAI / QUICK START</small><h2>使用说明</h2><ol><li>导入或直接粘贴 Markdown 正文。</li><li>从 12 套 Style 中选择整篇文章的设计语言。</li><li>在组件面板插入导语、重点、提醒、分割、推荐或关注模块。</li><li>在右侧预览检查图片、表格、代码和阅读密度。</li><li>复制公众号正文；有待上传图片时，下载图片包并按编号在公众号后台上传。</li></ol><button className="v091-btn primary" onClick={() => setHelpOpen(false)}>开始编辑</button></section></div>}{notice && <div className="v091-toast">{notice}</div>}
+    <footer><span>{wordCount} 字</span><span>约 {readMinutes} 分钟</span><span>{codeCount} 个代码块</span><span>{imageCount} 张图</span><span>文章保存在本机</span><PlatformStatus /><OfflineStatus editorReady={editorReady} /></footer>{apiOpen && <ApiSettings profiles={apiProfiles} roles={apiRoles} onClose={() => setApiOpen(false)} onChange={(profiles, roles) => { applyApiProfiles(profiles, roles); say('API 配置已更新'); }} />}{helpOpen && <div className="v091-modal-backdrop" role="dialog" aria-modal="true" aria-label="使用说明"><section className="v091-local-api-modal v091-help-modal"><button className="v091-modal-close" onClick={() => setHelpOpen(false)} aria-label="关闭">×</button><small>KAIPAI / QUICK START</small><h2>使用说明</h2><ol><li>导入或直接粘贴 Markdown 正文。</li><li>从 12 套 Style 中选择整篇文章的设计语言。</li><li>在组件面板插入导语、重点、提醒、分割、推荐或关注模块。</li><li>在右侧预览检查图片、表格、代码和阅读密度。</li><li>点击“复制公众号”可直接复制排版；本地图片请使用楷排插件上传到微信，再复制完整图文。</li></ol><button className="v091-btn primary" onClick={() => setHelpOpen(false)}>开始编辑</button></section></div>}{notice && <div className="v091-toast">{notice}</div>}
   </main>;
 }

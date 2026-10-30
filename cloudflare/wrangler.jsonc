@@ -5,7 +5,7 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "main": "./worker.ts",
+  "main": "worker.ts",
   "assets": {
     "directory": "dist/client",
     "html_handling": "none",
@@ -14,6 +14,7 @@
     "run_worker_first": [
       "/*",
       "!/_next/static/*",
+      "!/sw.js",
       "!/*/_next/static/*"
     ]
   },
@@ -22,6 +23,13 @@
     "KAIPAI_AI_STREAM": "1"
   },
   "account_id": "e88e7ed4e217c2f22dc3bd17fde8ee1d",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "kaipai.itskairo.com",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": false,
     "logs": {
@@ -31,7 +39,6 @@
       "enabled": false
     }
   },
-  "workers_dev": true,
   "ratelimits": [
     {
       "name": "KAIPAI_API_RATE_LIMITER",

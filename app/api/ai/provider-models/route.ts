@@ -1,3 +1,4 @@
+import { readResponseJson, RESPONSE_LIMITS } from '../../../../lib/response-body';
 import { apiConnectionFailure } from '../../../../lib/server-endpoint';
 import { AI_PROVIDER_DEFAULTS } from '../../../../lib/providers';
 import { NextRequest } from 'next/server';
@@ -41,20 +42,20 @@ export async function POST(request: NextRequest) {
         redirect: 'manual',
         cache: 'no-store',
       });
+      if (!response.ok) {
+        const error = response.status === 401 || provider === 'Gemini' && response.status === 400 ? '密钥无效或与所选区域不匹配' : response.status === 403 ? '当前密钥没有模型列表权限' : `官方模型列表暂时不可用（${response.status}）`;
+        return NextResponse.json({ ok: false, error }, { status: 502 });
+      }
+      const payload = await readResponseJson(response, RESPONSE_LIMITS.models);
+      const data = provider === 'Gemini' || provider === 'Grok' ? (Array.isArray(payload?.models) ? payload.models : []) : provider === 'Qwen' ? (Array.isArray(payload?.output?.models) ? payload.output.models : []) : (Array.isArray(payload?.data) ? payload.data : []);
+      const models: Model[] = data
+        .filter((item: unknown): item is { id?: string; model?: string; name?: string; display_name?: string; created?: number; published_time?: string; supportedGenerationMethods?: string[]; inference_metadata?: { response_modality?: string[] } } => Boolean(item && typeof item === 'object' && (typeof (item as { id?: unknown }).id === 'string' || provider === 'Gemini' && typeof (item as { name?: unknown }).name === 'string' || provider === 'Qwen' && typeof (item as { model?: unknown }).model === 'string')))
+        .filter((item: { id?: string; model?: string; name?: string; supportedGenerationMethods?: string[]; inference_metadata?: { response_modality?: string[] } }) => provider === 'Gemini' ? /^models\/gemini-/.test(item.name || '') && item.supportedGenerationMethods?.includes('generateContent') && !/(image|audio|live|tts|transcri|embedding)/i.test(item.name || '') : provider === 'Grok' ? /^grok-/.test(item.id || '') && !/(image|video|voice|audio)/i.test(item.id || '') : provider === 'Qwen' ? /^qwen/.test(item.model || '') && (!item.inference_metadata?.response_modality || item.inference_metadata.response_modality.includes('Text')) : provider !== 'OpenAI' || /^gpt-(?:[456](?:\.|-|$))/.test(item.id || '') && !/(audio|realtime|image|search|codex|chat-latest|transcri|tts)/i.test(item.id || ''))
+        .sort((a: { created?: number }, b: { created?: number }) => (b.created || 0) - (a.created || 0))
+        .slice(0, 100)
+        .map((item: { id?: string; model?: string; name?: string; displayName?: string; display_name?: string }) => ({ id: provider === 'Gemini' ? (item.name || '').replace(/^models\//, '') : provider === 'Qwen' ? item.model || '' : item.id || '', name: provider === 'Gemini' ? item.displayName || (item.name || '').replace(/^models\//, '') : item.display_name || item.name || item.model || item.id || '' }));
+      return NextResponse.json({ ok: true, models });
     } finally { clearTimeout(timeout); }
-    if (!response.ok) {
-      const error = response.status === 401 || provider === 'Gemini' && response.status === 400 ? '密钥无效或与所选区域不匹配' : response.status === 403 ? '当前密钥没有模型列表权限' : `官方模型列表暂时不可用（${response.status}）`;
-      return NextResponse.json({ ok: false, error }, { status: 502 });
-    }
-    const payload = await response.json();
-    const data = provider === 'Gemini' || provider === 'Grok' ? (Array.isArray(payload?.models) ? payload.models : []) : provider === 'Qwen' ? (Array.isArray(payload?.output?.models) ? payload.output.models : []) : (Array.isArray(payload?.data) ? payload.data : []);
-    const models: Model[] = data
-      .filter((item: unknown): item is { id?: string; model?: string; name?: string; display_name?: string; created?: number; published_time?: string; supportedGenerationMethods?: string[]; inference_metadata?: { response_modality?: string[] } } => Boolean(item && typeof item === 'object' && (typeof (item as { id?: unknown }).id === 'string' || provider === 'Gemini' && typeof (item as { name?: unknown }).name === 'string' || provider === 'Qwen' && typeof (item as { model?: unknown }).model === 'string')))
-      .filter((item: { id?: string; model?: string; name?: string; supportedGenerationMethods?: string[]; inference_metadata?: { response_modality?: string[] } }) => provider === 'Gemini' ? /^models\/gemini-/.test(item.name || '') && item.supportedGenerationMethods?.includes('generateContent') && !/(image|audio|live|tts|transcri|embedding)/i.test(item.name || '') : provider === 'Grok' ? /^grok-/.test(item.id || '') && !/(image|video|voice|audio)/i.test(item.id || '') : provider === 'Qwen' ? /^qwen/.test(item.model || '') && (!item.inference_metadata?.response_modality || item.inference_metadata.response_modality.includes('Text')) : provider !== 'OpenAI' || /^gpt-(?:[456](?:\.|-|$))/.test(item.id || '') && !/(audio|realtime|image|search|codex|chat-latest|transcri|tts)/i.test(item.id || ''))
-      .sort((a: { created?: number }, b: { created?: number }) => (b.created || 0) - (a.created || 0))
-      .slice(0, 100)
-      .map((item: { id?: string; model?: string; name?: string; displayName?: string; display_name?: string }) => ({ id: provider === 'Gemini' ? (item.name || '').replace(/^models\//, '') : provider === 'Qwen' ? item.model || '' : item.id || '', name: provider === 'Gemini' ? item.displayName || (item.name || '').replace(/^models\//, '') : item.display_name || item.name || item.model || item.id || '' }));
-    return NextResponse.json({ ok: true, models });
   } catch (error) {
     const failure = apiConnectionFailure(error, '读取模型列表');
     return NextResponse.json({ ok: false, error: failure.error }, { status: failure.status });

@@ -1,3 +1,4 @@
+import { UpstreamResponseLimitError } from '../../../lib/response-body';
 import { buildSkillPlan, finishCoverReview } from '../../../lib/server/skills';
 import { NextRequest } from 'next/server';
 import { resolveCredential } from '../../../lib/server/credentials';
@@ -5,7 +6,8 @@ import { readPrivateRequest, privateJson } from '../../../lib/server/request';
 const NextResponse = { json: (body: unknown, init?: { status?: number }) => privateJson(body, init?.status) };
 import { AI_PROVIDER_DEFAULTS, type AiProviderId } from '../../../lib/providers';
 import { capabilityEndpoint, apiConnectionFailure } from '../../../lib/server-endpoint';
-import { readChatResponse, upstreamFailureCategory, UpstreamChatStreamError } from '../../../lib/server/chat-response';
+import { buildTextRequestBody } from '../../../lib/ai-protocol';
+import { readChatResponse, readResponsesResponse, upstreamFailureCategory, UpstreamChatStreamError } from '../../../lib/server/chat-response';
 
 export const runtime = 'nodejs';
 
@@ -52,50 +54,48 @@ export async function POST(request: NextRequest) {
     const image = workflow && 'image' in workflow ? workflow.image : undefined;
     if (!prompt) return NextResponse.json({ ok: false, error: '文章内容为空' }, { status: 400 });
     const controller = new AbortController();
-    request.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    const cancel = () => controller.abort();
+    request.signal.addEventListener('abort', cancel, { once: true });
     if (request.signal.aborted) controller.abort();
-    const timeout = setTimeout(() => controller.abort(), reviewingImage ? 180000 : action === 'plan' ? 90000 : /^(gpt-[56]|claude-fable|kimi-k3)/.test(model) ? 45000 : 25000);
+    const timeout = setTimeout(() => controller.abort(), reviewingImage ? 180000 : (body.operation === 'layout' || body.operation === 'full') ? 210000 : action === 'plan' ? 90000 : /^(gpt-[56]|claude-fable|kimi-k3)/.test(model) ? 45000 : 25000);
     let response: Response;
     let chatText: string | undefined;
-    let category = 'unknown';
     const started = Date.now();
-    let raw = {} as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }>; choices?: Array<{ message?: { content?: string } }> };
+    let failureCategory = 'unclassified';
     try {
       const maxOutputTokens = action === 'test' ? 384 : 10000;
       phase = 'upstream';
       response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-        body: JSON.stringify(adapter === 'openai-responses' ? { model, instructions: system, input: image ? [{ role: 'user', content: [{ type: 'input_text', text: prompt }, { type: 'input_image', image_url: image }] }] : prompt, max_output_tokens: maxOutputTokens, stream: false } : { model, messages: [
-          { role: provider === 'OpenAI' && /^gpt-[56]/.test(model) ? 'developer' : 'system', content: system },
-          { role: 'user', content: image ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: image, detail: 'high' } }] : prompt },
-        ], ...(provider === 'Kimi' || (provider === 'OpenAI' && /^gpt-[56]/.test(model)) ? { max_completion_tokens: maxOutputTokens } : { max_tokens: maxOutputTokens }), ...(provider === 'Kimi' && model === 'kimi-k3' ? { reasoning_effort: 'low' } : {}), stream: streaming }),
+        body: JSON.stringify(buildTextRequestBody({ provider, model, adapter, system, prompt, image, maxOutputTokens, streaming })),
         signal: controller.signal,
         redirect: 'manual',
         cache: 'no-store',
       });
       phase = 'response-json';
       if (response.ok) {
-        try { if (adapter === 'openai-chat') chatText = await readChatResponse(response); else raw = await response.json(); }
+        try { chatText = adapter === 'openai-chat' ? await readChatResponse(response) : await readResponsesResponse(response); }
         catch (error) {
           if (controller.signal.aborted) throw error;
+          if (error instanceof UpstreamResponseLimitError) throw error;
           if (error instanceof UpstreamChatStreamError) {
-            console.warn('AI stream failure', { operation: operationLabel, category: error.category, streaming, elapsedMs: Date.now() - started });
-            return NextResponse.json({ ok: false, error: `${operationLabel}未完成：模型服务在流式回复中返回错误，请稍后重试` }, { status: 502 });
+            console.warn('AI response failure', { operation: operationLabel, category: error.category, streaming, elapsedMs: Date.now() - started });
+            return NextResponse.json({ ok: false, error: `${operationLabel}未完成：模型服务返回错误，请稍后重试` }, { status: 502 });
           }
           if (error instanceof Error && ['IncompleteChatStream', 'ChatOutputLimit', 'ChatContentFiltered'].includes(error.message)) {
             return NextResponse.json({ ok: false, error: `${operationLabel}未完成：模型回复中断或被截断，未应用不完整结果，请重试` }, { status: 502 });
           }
           return NextResponse.json({ ok: false, error: '模型接口未返回有效 JSON，可能返回了网关错误页面，请稍后重试或检查接口兼容性' }, { status: 502 });
         }
-      }
-      else category = await upstreamFailureCategory(response);
-    } finally { clearTimeout(timeout); }
+      } else { failureCategory = await upstreamFailureCategory(response); }
+    } finally { clearTimeout(timeout); request.signal.removeEventListener('abort', cancel); }
     if (!response.ok) {
+      const category = failureCategory;
       console.warn('AI upstream failure', { operation: operationLabel, status: response.status, category, streaming, elapsedMs: Date.now() - started });
       return NextResponse.json({ ok: false, error: `${reviewingImage ? [400, 422].includes(response.status) ? '看图审核未完成，请确认模型支持图片输入。' : '看图审核未完成，原图已保留。' : ''}${upstreamError(response.status, provider)}` }, { status: 502 });
     }
-    const text = adapter === 'openai-responses' ? raw?.output_text || raw?.output?.flatMap((item: { content?: Array<{ text?: string }> }) => item.content || []).map((item: { text?: string }) => item.text || '').join('') : chatText;
+    const text = chatText;
     if (typeof text !== 'string' || !text.trim()) return NextResponse.json({ ok: false, error: '服务未返回可用内容' }, { status: 502 });
     let review;
     if (reviewingImage) {

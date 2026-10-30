@@ -184,8 +184,7 @@ html[data-ui="neo2"] .btn.primary {
   box-shadow: 0 0 0 var(--neo-ink) !important;
 }
 
-.v091-app[data-ui="neo2"] .v091-top-status,
-.v091-neo2 .v091-top-status {
+.v091-app[data-ui="neo2"] .v091-top-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -199,8 +198,7 @@ html[data-ui="neo2"] .btn.primary {
   font: 800 10px/1 ui-monospace, "Space Grotesk", monospace;
   letter-spacing: 0.04em;
 }
-.v091-app[data-ui="neo2"] .v091-top-status::before,
-.v091-neo2 .v091-top-status::before {
+.v091-app[data-ui="neo2"] .v091-top-status::before {
   content: "";
   width: 7px;
   height: 7px;
@@ -217,15 +215,13 @@ html[data-ui="neo2"] .btn.primary {
   box-shadow: 0 4px 0 var(--neo-ink) !important;
 }
 
-.v091-app[data-ui="neo2"] .v091-ui-switch,
-.v091-neo2 .v091-ui-switch {
+.v091-app[data-ui="neo2"] .v091-ui-switch {
   border: 2px solid var(--neo-ink) !important;
   box-shadow: var(--neo-shadow) !important;
   border-radius: var(--neo-radius) !important;
 }
 
-.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
-.v091-neo2 .v091-ui-switch button.active {
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active {
   background: var(--neo-yellow) !important;
   box-shadow: inset 0 -3px 0 var(--neo-ink);
 }
@@ -407,10 +403,7 @@ html[data-ui="neo2"] .snippet,
 html[data-ui="neo2"] .card,
 .v091-app[data-ui="neo2"] .v091-style-grid > button,
 .v091-app[data-ui="neo2"] .v091-quick-style-list > button,
-.v091-app[data-ui="neo2"] .v091-component-grid > button,
-.v091-neo2 .v091-style-grid > button,
-.v091-neo2 .v091-quick-style-list > button,
-.v091-neo2 .v091-component-grid > button {
+.v091-app[data-ui="neo2"] .v091-component-grid > button {
   position: relative;
   overflow: hidden;
   border: 2px solid var(--neo-ink) !important;
@@ -425,28 +418,25 @@ html[data-ui="neo2"] .card,
 
 @media (hover: hover) and (pointer: fine) {
   body[data-ui="neo2"] .quick-style-card:hover,
-  body[data-ui="neo2"] .component-card:hover,
-  body[data-ui="neo2"] .component-row:hover,
-  body[data-ui="neo2"] .heading-style-card:hover,
-  body[data-ui="neo2"] .divider-grid > button:hover,
-  body[data-ui="neo2"] .follow-template-grid > button:hover,
-  body[data-ui="neo2"] #draftList .draft:hover,
-  body[data-ui="neo2"] #draftList .draft-row:hover,
-  body[data-ui="neo2"] .snippet:hover,
-  body[data-ui="neo2"] .card:hover,
-  html[data-ui="neo2"] .quick-style-card:hover,
-  html[data-ui="neo2"] .component-card:hover,
-  html[data-ui="neo2"] .heading-style-card:hover,
-  html[data-ui="neo2"] .divider-grid > button:hover,
-  html[data-ui="neo2"] .follow-template-grid > button:hover,
-  html[data-ui="neo2"] #draftList .draft:hover,
-  html[data-ui="neo2"] #draftList .draft-row:hover,
-  .v091-app[data-ui="neo2"] .v091-style-grid > button:hover,
-  .v091-app[data-ui="neo2"] .v091-quick-style-list > button:hover,
-  .v091-app[data-ui="neo2"] .v091-component-grid > button:hover,
-  .v091-neo2 .v091-style-grid > button:hover,
-  .v091-neo2 .v091-quick-style-list > button:hover,
-  .v091-neo2 .v091-component-grid > button:hover {
+body[data-ui="neo2"] .component-card:hover,
+body[data-ui="neo2"] .component-row:hover,
+body[data-ui="neo2"] .heading-style-card:hover,
+body[data-ui="neo2"] .divider-grid > button:hover,
+body[data-ui="neo2"] .follow-template-grid > button:hover,
+body[data-ui="neo2"] #draftList .draft:hover,
+body[data-ui="neo2"] #draftList .draft-row:hover,
+body[data-ui="neo2"] .snippet:hover,
+body[data-ui="neo2"] .card:hover,
+html[data-ui="neo2"] .quick-style-card:hover,
+html[data-ui="neo2"] .component-card:hover,
+html[data-ui="neo2"] .heading-style-card:hover,
+html[data-ui="neo2"] .divider-grid > button:hover,
+html[data-ui="neo2"] .follow-template-grid > button:hover,
+html[data-ui="neo2"] #draftList .draft:hover,
+html[data-ui="neo2"] #draftList .draft-row:hover,
+.v091-app[data-ui="neo2"] .v091-style-grid > button:hover,
+.v091-app[data-ui="neo2"] .v091-quick-style-list > button:hover,
+.v091-app[data-ui="neo2"] .v091-component-grid > button:hover {
     transform: translate(-2px, -2px) !important;
     box-shadow: var(--neo-shadow-hover) !important;
   }
@@ -464,9 +454,7 @@ html[data-ui="neo2"] .component-card:active,
 html[data-ui="neo2"] .divider-grid > button:active,
 html[data-ui="neo2"] .follow-template-grid > button:active,
 .v091-app[data-ui="neo2"] .v091-style-grid > button:active,
-.v091-app[data-ui="neo2"] .v091-component-grid > button:active,
-.v091-neo2 .v091-style-grid > button:active,
-.v091-neo2 .v091-component-grid > button:active {
+.v091-app[data-ui="neo2"] .v091-component-grid > button:active {
   transform: translate(2px, 2px) !important;
   box-shadow: var(--neo-press) !important;
 }
@@ -481,9 +469,7 @@ html[data-ui="neo2"] .heading-style-card.active,
 html[data-ui="neo2"] .follow-template-grid > button.active,
 html[data-ui="neo2"] #draftList .draft.active,
 .v091-app[data-ui="neo2"] .v091-style-grid > button.active,
-.v091-app[data-ui="neo2"] .v091-quick-style-list > button.active,
-.v091-neo2 .v091-style-grid > button.active,
-.v091-neo2 .v091-quick-style-list > button.active {
+.v091-app[data-ui="neo2"] .v091-quick-style-list > button.active {
   background: var(--neo-selected) !important;
   box-shadow: var(--neo-shadow-lg) !important;
   outline: none !important;
@@ -628,8 +614,7 @@ body[data-ui="neo2"] .v080-style-thumb,
 body[data-ui="neo2"] .rich-style-preview,
 body[data-ui="neo2"] .quick-style-card .v080-style-thumb,
 html[data-ui="neo2"] .v080-style-thumb,
-.v091-app[data-ui="neo2"] .v091-style-thumb,
-.v091-neo2 .v091-style-thumb {
+.v091-app[data-ui="neo2"] .v091-style-thumb {
   border-radius: 4px;
   overflow: hidden;
 }
@@ -1020,8 +1005,7 @@ html[data-ui="neo2"] .chip.active {
   /* do not force background/color — leave to style paper / WeChat skins */
 }
 
-.v091-app[data-ui="neo2"] .v091-phone-top,
-.v091-neo2 .v091-phone-top {
+.v091-app[data-ui="neo2"] .v091-phone-top {
   border-bottom: 2px solid var(--neo-ink);
   font-weight: 800;
 }
@@ -1435,8 +1419,7 @@ html[data-ui="neo2"] .rail button.active {
 }
 
 /* UI switch active = bright tape */
-.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
-.v091-neo2 .v091-ui-switch button.active {
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active {
   background: var(--neo-yellow-bright) !important;
 }
 
@@ -1473,8 +1456,7 @@ html[data-ui="neo2"] #quickStyleList .quick-style-card.active {
 }
 
 /* Status LED stays green; pill ink from palette */
-.v091-app[data-ui="neo2"] .v091-top-status,
-.v091-neo2 .v091-top-status {
+.v091-app[data-ui="neo2"] .v091-top-status {
   background: var(--neo-ink) !important;
   color: var(--neo-desk) !important;
   border-color: var(--neo-ink) !important;
@@ -1637,44 +1619,13 @@ html[data-ui="neo2"] #quickStyleList .quick-style-card {
 }
 
 /* Mode tabs always-visible brand colors (UI / Soft NEO / Tactile Lab) */
-.v091-app .v091-ui-switch {
-  border: 2px solid #1B1B1B !important;
-  box-shadow: 3px 3px 0 #1B1B1B !important;
-  border-radius: 5px !important;
-  overflow: hidden;
-}
-
-.v091-app .v091-ui-switch em { /* UI → black */
-  color: #F7F0D3 !important;
-  font-weight: 800 !important;
-}
-
-.v091-app .v091-ui-switch button:first-of-type { /* Soft NEO → purple */
-  font-weight: 850 !important;
-}
-
-.v091-app .v091-ui-switch button:last-of-type { /* Tactile Lab idle */
-  font-weight: 850 !important;
-}
-
-.v091-app .v091-ui-switch button:last-of-type.active { /* Tactile selected = dark yellow */
-  color: #1B1B1B !important;
-  box-shadow: inset 0 -3px 0 #1B1B1B !important;
-}
-
-.v091-app .v091-ui-switch button:first-of-type.active {
-  color: #FFFFFF !important;
-  box-shadow: inset 0 -3px 0 #1B1B1B !important;
-}
 
 /* Soft NEO path: kill prior yellow-active override on ui-switch */
-.v091-app[data-ui="neo2"] .v091-ui-switch button.active,
-.v091-neo2 .v091-ui-switch button.active {
+.v091-app[data-ui="neo2"] .v091-ui-switch button.active {
   background: #A855F7 !important;
   color: #FFFFFF !important;
 }
-.v091-app[data-ui="neo2"] .v091-ui-switch button:last-of-type.active,
-.v091-neo2 .v091-ui-switch button:last-of-type.active {
+.v091-app[data-ui="neo2"] .v091-ui-switch button:last-of-type.active {
   background: #EBB956 !important;
   color: #1B1B1B !important;
 }
@@ -1720,32 +1671,6 @@ html[data-ui="neo2"] #quickStyleList .quick-style-card {
 }
 
 /* Mode tabs — bold brand roles (always-visible) */
-.v091-app .v091-ui-switch {
-  border: 2.5px solid #1B1B1B !important;
-  box-shadow: 4px 4px 0 #1B1B1B !important;
-}
-.v091-app .v091-ui-switch em {
-  background: #1B1B1B !important;
-  color: #FFDC58 !important;
-  letter-spacing: 0.08em;
-}
-.v091-app .v091-ui-switch button:first-of-type {
-  background: #A855F7 !important;
-  color: #FFFFFF !important;
-  text-shadow: none;
-}
-.v091-app .v091-ui-switch button:last-of-type {
-  background: #F7F0D3 !important;
-  color: #1B1B1B !important;
-}
-.v091-app .v091-ui-switch button:last-of-type.active {
-  background: #EBB956 !important;
-  box-shadow: inset 0 -4px 0 #1B1B1B !important;
-}
-.v091-app .v091-ui-switch button:first-of-type.active {
-  background: #A855F7 !important;
-  box-shadow: inset 0 -4px 0 #1B1B1B !important;
-}
 
 /* Toolbar buttons — cream faces, ink edge, red hover shadow */
 .v091-app[data-ui="neo2"] .v091-btn,
@@ -1808,8 +1733,7 @@ html[data-ui="neo2"] .btn.primary {
   border: 2px solid #1B1B1B !important;
   box-shadow: 3px 3px 0 #37BDF9 !important;
 }
-.v091-app[data-ui="neo2"] .v091-top-status,
-.v091-neo2 .v091-top-status {
+.v091-app[data-ui="neo2"] .v091-top-status {
   background: #1B1B1B !important;
   color: #FFDC58 !important;
   border: 2px solid #1B1B1B !important;

@@ -2,9 +2,9 @@ import { wechatTextStyle } from '../wechat-typography';
 import { escapeHtml } from '../wechat-text';
 import type { Theme } from './elements';
 import { resolveArticleHighlight } from './highlight';
-export function renderHeadingTemplate(theme: Theme, headingStyleId: string, ch: string, barLead: string, h2Size: number, h2Lh: number, titleInline: string, headingIconChar: string, chineseChapter: string, chipInk: string, accentLabel: string) {
+export function renderHeadingTemplate(theme: Theme, headingStyleId: string, ch: string, barLead: string, h2Size: number, _h2Lh: number, titleInline: string, headingIconChar: string, chineseChapter: string, chipInk: string, accentLabel: string) {
     const { accent } = theme;
-    const headingMark = resolveArticleHighlight(theme.style.id, undefined, theme.paper, theme.ink);
+    const headingMark = resolveArticleHighlight(theme.style.id, undefined, theme.paper, theme.ink, 'heading');
     const palette = { ink: theme.ink, paper: theme.paper, line: theme.line };
     const base = `margin:28px 0 12px;color:${palette.ink};${wechatTextStyle(h2Size)};font-weight:700;text-align:left;box-sizing:border-box;max-width:100%`;
     const titleSpan = `<span style="${wechatTextStyle(h2Size)};color:${palette.ink}">${titleInline}</span>`;

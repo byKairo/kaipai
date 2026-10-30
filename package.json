@@ -14,10 +14,12 @@
     "setup:credentials": "node scripts/setup-credentials.cjs",
     "skills:sync": "node scripts/sync-skills.cjs",
     "cf:prepare": "node scripts/prepare-cloudflare.cjs",
-    "cf:build": "node scripts/prepare-cloudflare.cjs && npm --prefix .cloudflare-deploy run build",
+    "cf:build": "npm run cf:sync-assets && node scripts/prepare-cloudflare.cjs && npm --prefix .cloudflare-deploy run build && node scripts/finalize-cloudflare.cjs && node scripts/verify-cloudflare-build.cjs --record",
     "cf:preview": "npm --prefix .cloudflare-deploy run preview",
-    "cf:deploy": "npm --prefix .cloudflare-deploy run deploy",
-    "cf:ci": "npm test && npm run typecheck && npm run cf:prepare && npm --prefix .cloudflare-deploy ci --legacy-peer-deps --no-audit --no-fund && npm --prefix .cloudflare-deploy run build"
+    "cf:deploy": "node scripts/verify-github-release.cjs && node scripts/verify-cloudflare-build.cjs && npm --prefix .cloudflare-deploy run deploy",
+    "cf:ci": "npm test && npm run typecheck && npm run cf:sync-assets && npm run cf:prepare && npm --prefix .cloudflare-deploy ci --legacy-peer-deps --no-audit --no-fund && npm --prefix .cloudflare-deploy run build && node scripts/finalize-cloudflare.cjs && node scripts/verify-cloudflare-build.cjs --record",
+    "start:bridge": "KAIPAI_LOCAL_BRIDGE=1 KAIPAI_BRIDGE_ORIGIN=https://kaipai.kairostudio.workers.dev KAIPAI_ALLOW_LOOPBACK_API=1 next start --hostname 127.0.0.1 --port 3003",
+    "cf:sync-assets": "node scripts/release-assets.cjs sync"
   },
   "dependencies": {
     "@tiptap/extension-highlight": "^3.31.3",

@@ -1,3 +1,5 @@
+import { codeSkin, emphasisStyle, styleUseCases } from '../lib/article-styles/visual-rules';
+import type { Theme } from '../lib/article-styles/elements';
 import assert from 'node:assert/strict';
 import { styles } from '../lib/styles';
 import { markdownToWechat, htmlToPlainText } from '../lib/wechat-html';
@@ -97,8 +99,8 @@ assert.doesNotMatch(original,/padding:11px 11px 18px/,'Photography uses full wid
 assert.match(htmlToPlainText(original),/01 \/ 说明/);
 assert.match(original,/height:auto/);
 const paper=render('knowledge','正文');
-assert.match(paper,/background-image:url\('data:image\/jpeg;base64,/);
-assert.ok(wechatResourceNotice(paper).includes('纸纹'));
+assert.doesNotMatch(paper,/background-image:/, 'Column defaults to a clean white page');
+assert.equal(wechatResourceNotice(paper), '');
 const hosted=render('knowledge','正文',{paperTextureUrl:'https://mmbiz.qpic.cn/example.jpg'});
 assert.match(hosted,/background-image:url\('https:\/\/mmbiz.qpic.cn\/example.jpg'\)/);
 assert.equal(wechatResourceNotice(hosted),'');
@@ -151,3 +153,38 @@ for (const id of ['boldneo', 'pixelpost']) {
  const unnumbered = render(id, '## 章节标题');
  assert.ok(!htmlToPlainText(unnumbered).includes('01'), 'Compact designs default to unnumbered labels');
 }
+
+// Long tokens must wrap inside narrow headings, quotes, cards and table cells.
+for (const style of styles) {
+ const token = 'UnbrokenLongValue'.repeat(12);
+ const html = render(style.id, `# ${token}\n\n> ${token}\n\n:::callout\n${token}\n:::\n\n| 字段 | 内容 |\n| --- | --- |\n| 参数 | ${token} |`);
+ for (const tag of ['h1', 'blockquote', 'td']) {
+  const nodes = Array.from(html.matchAll(new RegExp(`<${tag}([^>]*)>`, 'g')));
+  assert.ok(nodes.length, style.id + ': stress fixture contains ' + tag);
+  assert.ok(nodes.every(node => node[1].includes('overflow-wrap:anywhere')), style.id + ': long content wraps in ' + tag);
+ }
+ assert.equal(auditWechatHtml(html).length, 0, style.id + ': stress fixture remains compliant');
+ assert.ok(htmlToPlainText(html).includes(token), style.id + ': long content is not shortened');
+}
+
+// Differences survive removal of color: code frame, header, inset, type and rhythm.
+const codeStructures = new Set<string>();
+for (const style of styles) {
+ const palette = paletteForArticle(style.id, style.paper);
+ const theme: Theme = { style, accent: '#ffffcc', ink: palette.ink, muted: palette.muted, paper: palette.paper, line: palette.line, surface: palette.surface, quote: palette.quote, font: '', bodySize: style.reading.fontSize, lineHeight: 30, paragraphGap: style.reading.paragraphGap || 16, imageRadius: 0 };
+ const code = codeSkin(theme);
+ codeStructures.add(JSON.stringify([code.frame.replace(/#[a-f0-9]{6}/gi, 'COLOR'), code.chrome, code.padding, code.margin, code.size]));
+ const weight = emphasisStyle(theme);
+ const color = weight.match(/color:(#[a-f0-9]+)/i)![1];
+ assert.ok(contrastRatio(color, palette.paper) >= 4.5, style.id + ': emphasis remains readable with a pale custom accent');
+ const codeHtml = render(style.id, '\`\`\`js\nconst original = "<safe>&";\n\`\`\`');
+ assert.ok(htmlToPlainText(codeHtml).includes('const original = "<safe>&";'), style.id + ': code stays exact');
+ assert.ok(styleUseCases[style.design].purpose.length > 0);
+}
+assert.equal(codeStructures.size, 12, 'All 12 code treatments differ structurally, independently of color');
+
+const columnReading = render("knowledge", "# 标题\n\n正文 **原有重点**\n\n## 章节\n\n后续正文");
+assert.match(columnReading, /font-family:[^;]*PingFang/, "Column body is sans serif");
+assert.match(columnReading, /<h2[^>]*Songti SC/, "Column chapters use a distinct serif voice");
+assert.equal((columnReading.match(/<strong /g) || []).length, 1, "No automatic extra emphasis");
+assert.doesNotMatch(columnReading, /background-image:/);

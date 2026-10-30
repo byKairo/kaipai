@@ -14,7 +14,8 @@ export function paletteForArticle(styleId: string, paper: string): Palette {
     const style = findStyle(styleId);
     const { text: ink, muted, surface, line, quote } = style.colors;
     if (paper.toLowerCase() === style.paper.toLowerCase() || (!isDarkPaper(style.paper) && isPureWhitePaper(paper))) {
-        return { paper, ink, muted, surface, line, quote };
+        const safeMuted = style.preset && [paper,surface,quote].some(bg=>contrastRatio(muted,bg)<4.5) ? ink : muted;
+        return { paper, ink, muted:safeMuted, surface, line, quote };
     }
     // A custom paper may invert the required contrast; retain the existing fallback.
     return { paper, ...tokensForPaper(paper) };

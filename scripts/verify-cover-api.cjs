@@ -36,6 +36,12 @@ async function main() {
       assert.ok(responses || chat || generating, `Unexpected provider route ${req.url}`);
       const call = { path: req.url, scenario: scenario.name, actualImageAttached: false };
       calls.push(call);
+      if (scenario.kind === 'redirect') {
+        res.statusCode = 302;
+        res.setHeader('Location', '/v1/redirect-must-not-be-followed');
+        res.end('Redirect refused by caller');
+        return;
+      }
       res.setHeader('Content-Type', 'application/json');
       if (generating) {
         assert.equal(scenario.kind, 'image');
@@ -70,6 +76,13 @@ async function main() {
       assert.ok(system.includes(scenario.mode === 'with-text' ? '# 有字封面工作流' : '## 无字创作工作流'));
       if (scenario.kind === 'compose') assert.ok(system.includes(scenario.mode === 'with-text' ? '# 叙事摄影：有字' : '# 叙事摄影：无字'));
       const text = JSON.stringify(scenario.reply);
+      if (body.stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        const split = Math.floor(text.length / 2);
+        for (const content of [text.slice(0, split), text.slice(split)]) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] })}\n\n`);
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\n`);
+        return res.end('data: [DONE]\n\n');
+      }
       res.end(JSON.stringify(responses ? { output: [{ type: 'message', content: [{ type: 'output_text', text }] }] } : { choices: [{ message: { content: text } }] }));
     } catch (error) {
       mockFailure = error;
@@ -145,11 +158,19 @@ async function main() {
     scenario = { name: 'generate-supported-native-size', kind: 'image', mode: 'wordless' };
     const native = await send('/api/ai/image', { provider: 'Custom', apiKey: sealed.credential, baseUrl, model: 'gpt-image-1', adapter: 'openai-images', aspectRatio: '2.35:1', prompt: compiledPrompt, design: options('wordless') });
     assert.equal(native.generationRatio, '1536:1024', 'Report actual requested native size rather than pretending exact cover ratio');
+    for (const route of ['/api/ai', '/api/ai/image']) {
+      scenario = { name: `redirect-refused-${route}`, kind: 'redirect', mode: 'wordless' };
+      const beforeRedirect = calls.length;
+      await send(route, route === '/api/ai'
+        ? { ...common, operation: 'design-compose', article, design: options('wordless') }
+        : { provider: 'Custom', apiKey: sealed.credential, baseUrl, model: 'image-test', aspectRatio: '2.35:1', prompt: compiledPrompt, design: options('wordless') }, 502);
+      assert.equal(calls.length, beforeRedirect + 1, 'Never forward credentials or follow a provider redirect');
+    }
     const beforeInvalid = calls.length;
     await send('/api/ai', { ...common, operation: 'design-compose', article, design: { ...options(), styleId: '../../SKILL.md' } }, 400);
     await send('/api/ai/image', { provider: 'Custom', apiKey: sealed.credential, baseUrl, model: 'image-test', prompt: compiledPrompt, design: { ...options('wordless'), styleId: 'editorial-design' } }, 400);
     assert.equal(calls.length, beforeInvalid, 'Invalid styles must be rejected before contacting a provider');
-    console.log(JSON.stringify({ ok: true, website: appUrl, provider: 'local mock only', credentialSealing: true, currentCatalog: true, completeArticle: true, routeIsolation: true, actualImageBytesInBothProtocols: true, titleMismatchRejected: true, missingCheckUnverified: true, correctionNotApproved: true, imageDesignConstraints: true, generationRatioReported: true, invalidStyleRejectedBeforeProvider: true, realModelVisualQualityVerified: false, calls }, null, 2));
+    console.log(JSON.stringify({ ok: true, website: appUrl, provider: 'local mock only', credentialSealing: true, currentCatalog: true, completeArticle: true, routeIsolation: true, actualImageBytesInBothProtocols: true, titleMismatchRejected: true, missingCheckUnverified: true, correctionNotApproved: true, imageDesignConstraints: true, generationRatioReported: true, invalidStyleRejectedBeforeProvider: true, realModelVisualQualityVerified: false, redirectsNotFollowed: true, calls }, null, 2));
   } finally {
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));

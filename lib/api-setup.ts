@@ -16,7 +16,7 @@ export function identifyApiAddress(input: string): { baseUrl: string; provider: 
 }
 
 export function modelKind(id: string): 'text' | 'image' | 'other' {
-  if (/embedding|rerank|audio|speech|tts|whisper|video|seedance|sora|veo/i.test(id)) return 'other';
+  if (/embedding|rerank|audio|speech|tts|whisper|video|seedance|sora|veo|realtime|gpt-live|moderation|transcri/i.test(id)) return 'other';
   if (/image|imagen|dall-e|flux|seedream|recraft|ideogram|aurora|wanx/i.test(id)) return 'image';
   return /gpt|gemini|claude|deepseek|qwen|kimi|moonshot|grok|llama|mistral|chat/i.test(id) ? 'text' : 'other';
 }

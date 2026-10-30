@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { getArticleReviewController } from '../lib/article-review-client';
 import { Schema } from '@tiptap/pm/model';
 import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { DecorationSet } from '@tiptap/pm/view';
@@ -77,3 +78,36 @@ const parsed = parseArticleSuggestions({ suggestions: [{ id: '<script>', kind: '
 assert.equal(parsed[0].replacement, null);
 assert.equal(parsed[0].id, 'review-1', 'model IDs do not become DOM attributes');
 console.log('PASS: inline review anchoring, mapping, invalidation, isolated adoption, formatting, undo and non-persistent decorations');
+
+// The first-page shell can control a mounted editor without importing ProseMirror.
+let adapterState = initial();
+let focusCount = 0;
+const adapterView = {
+  get state() { return adapterState; },
+  dispatch(tr: Transaction) { adapterState = adapterState.apply(tr); },
+  focus() { focusCount++; },
+};
+const adapterPlugin = articleReviewKey.get(adapterState)!;
+const lifecycle = adapterPlugin.spec.view!(adapterView as never);
+const controller = getArticleReviewController(adapterView)!;
+assert.ok(controller, 'The plugin registers its controller before editor ready');
+assert.equal(getArticleReviewController({}), undefined, 'Controllers are isolated by editor view');
+controller.set(controller.locate([suggestion('表达要很清晰。')]));
+controller.select('a', true);
+assert.equal(articleReviewKey.getState(adapterState)?.activeId, 'a');
+assert.equal(adapterState.selection.from, mark.from);
+assert.equal(controller.adopt('a'), true);
+assert.equal(adapterState.doc.child(1).textContent, '新的表达。');
+assert.equal(focusCount, 1);
+assert.ok(undo(adapterState, tr => { adapterState = adapterState.apply(tr); }));
+assert.ok(adapterState.doc.eq(doc), 'Adapter adoption remains one undoable edit');
+controller.set(controller.locate([suggestion('表达要很清晰。')]));
+controller.dismiss('a');
+assert.equal(articleReviewKey.getState(adapterState)?.items.length, 0);
+assert.ok(adapterState.doc.eq(doc));
+controller.set(controller.locate([suggestion('表达要很清晰。')]));
+controller.clear();
+assert.equal(articleReviewKey.getState(adapterState)?.items.length, 0);
+lifecycle.destroy!();
+assert.equal(getArticleReviewController(adapterView), undefined, 'Destroying the editor removes its controller');
+console.log('PASS: deferred editor controller isolation, selection, adoption, undo and lifecycle cleanup');

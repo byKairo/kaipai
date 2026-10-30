@@ -1,4 +1,5 @@
 import type { PublicationImage } from './wechat-publication';
+import { boundedResponseChunks } from './response-body';
 
 /** Rasterization is for downloadable files, never for pretending to upload through the clipboard. */
 async function rasterPng(source: string): Promise<Blob> {
@@ -22,22 +23,27 @@ async function rasterPng(source: string): Promise<Blob> {
     return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG 导出失败')), 'image/png'));
 }
 
-async function readImage(source: string): Promise<Blob> {
+export async function readArticleImage(source: string, signal?: AbortSignal): Promise<Blob> {
     if (!source) throw new Error('图片地址为空');
     const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) controller.abort();
     const timeout = window.setTimeout(() => controller.abort(), 12000);
     try {
         const response = await fetch(source, { signal: controller.signal });
         if (!response.ok) throw new Error(`图片读取失败（${response.status}）`);
-        const blob = await response.blob();
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of boundedResponseChunks(response, 24 * 1024 * 1024)) chunks.push(chunk);
+        const blob = new Blob(chunks, { type: response.headers.get('content-type')?.split(';')[0] || '' });
         if (blob.size && /^image\/(png|jpeg)$/i.test(blob.type)) return blob;
         // SVG, WebP and other formats become uploadable PNG files.
         const url = URL.createObjectURL(blob);
         try { return await rasterPng(url); } finally { URL.revokeObjectURL(url); }
-    } finally { window.clearTimeout(timeout); }
+    } finally { window.clearTimeout(timeout); signal?.removeEventListener('abort', abort); }
 }
 
-export async function createArticleImagePackage(images: PublicationImage[], read = readImage) {
+export async function createArticleImagePackage(images: PublicationImage[], read = readArticleImage) {
     if (!images.length) throw new Error('没有需要上传的图片');
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
@@ -60,7 +66,7 @@ export async function createArticleImagePackage(images: PublicationImage[], read
     }
     if (!count) throw new Error(`所有图片下载失败：${failures[0] || '图片不可读取'}`);
     zip.file('图片与图注.txt', entries.join('\n'));
-    zip.file('上传说明.txt', '1. 在楷排复制公众号正文，粘贴到公众号编辑器。\n2. 解压图片包，按插图编号找到正文中的「待上传」位置。\n3. 在公众号后台上传对应图片，并删掉该位置的提示文字；图注已在正文保留。\n4. 背景素材需上传后取得微信图片地址，填回楷排，再复制正文。\n5. 保存草稿并预览，检查图片与排版。\n\n图片文件是原图（SVG 等转为 PNG），不包含外层排版边框或拍立得装饰；装饰属于正文 HTML，后台需检查保留效果。');
+    zip.file('上传说明.txt', '这是自动转存失败时的备用原图包，不是正常复制所必需的步骤。\n1. 优先回到楷排重试自动转存，成功后复制完整图文。\n2. 如需手动处理，可先导出 HTML 留存排版，按图片与图注.txt 中的编号在公众号原位置插入对应图片。\n3. 保存草稿并预览，检查图片和排版。\n\nPNG/JPEG 保留原图；SVG 等转为 PNG。图片文件不包含外层排版边框，外框与背景属于正文 HTML。');
     if (failures.length) zip.file('未下载图片.txt', failures.join('\n\n'));
     return { blob: await zip.generateAsync({ type: 'blob' }), count, failed: failures.length };
 }

@@ -2,7 +2,7 @@ import type { Viewport } from 'next';
 import './globals.css';
 
 export const metadata = {
-  title: '楷排 · AI 公众号排版工作台',
+  title: '楷排 · 公众号排版工作台',
   description: '以本地优先方式完成公众号文章排版',
   icons: { icon: '/favicon.svg' },
 };

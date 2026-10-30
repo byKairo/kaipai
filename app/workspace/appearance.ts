@@ -1,4 +1,4 @@
-import { styles } from '../../lib/styles';
+import { allStyles as styles } from '../../lib/styles';
 import type { ArticleRecord } from '../../lib/document';
 
 const V091_HEADING_IDS = new Set([

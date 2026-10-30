@@ -1,0 +1,5 @@
+.host { position:relative; display:flex; flex-direction:column; min-height:100%; }
+.preview { position:absolute; inset:0; display:flex; flex-direction:column; background:#fff; }
+.preview > div { flex:none; padding:10px 16px; color:#625d66; font-size:12px; line-height:1.6; background:#fffaf0; }
+.preview button { margin-left:8px; padding:4px 8px; border:1px solid currentColor; border-radius:4px; background:#fff; color:inherit; }
+.preview textarea { flex:1; min-height:160px; width:100%; padding:20px; border:0; resize:none; color:#202124; background:#fff; font:14px/1.8 ui-monospace,monospace; }

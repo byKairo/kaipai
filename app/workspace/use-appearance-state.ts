@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useReducer, type SetStateAction } from 'react';
-import { styles } from '../../lib/styles';
+import { allStyles as styles } from '../../lib/styles';
 
 export function useAppearanceState() {
   const [state, updateAction] = useReducer((current: typeof initial, action: StateUpdate) => {
@@ -38,20 +38,20 @@ export function useAppearanceState() {
 }
 
 const initial = {
-    style: 0,
-    accent: styles[0].accent,
+    style: 12,
+    accent: styles[12].accent,
     markerColor: '#fff07a',
     variant: '标准',
-    fontSize: styles[0].reading.fontSize,
-    lineHeight: styles[0].reading.lineHeight,
-    padX: styles[0].reading.padX,
-    padY: styles[0].reading.padY,
-    imageRadius: styles[0].reading.imageRadius,
+    fontSize: styles[12].reading.fontSize,
+    lineHeight: styles[12].reading.lineHeight,
+    padX: styles[12].reading.padX,
+    padY: styles[12].reading.padY,
+    imageRadius: styles[12].reading.imageRadius,
     paperMode: 'style' as 'follow' | 'style' | 'custom',
     paperColor: '#ffffff',
     paperTextureUrl: '',
-    paragraphGap: 16,
-    fontFamily: styles[0].typography.fontFamily,
+    paragraphGap: styles[12].reading.paragraphGap ?? 18,
+    fontFamily: styles[12].typography.fontFamily,
     fontColor: '',
     headingStyle: 'bar',
     headingIcon: '◆',

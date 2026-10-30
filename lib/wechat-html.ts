@@ -1,3 +1,4 @@
+import { codeSkin, emphasisStyle } from './article-styles/visual-rules';
 /** WeChat OA clipboard HTML — also drives the live preview so both stay identical. */
 import { headingSize, renderFootnotes, renderHeading, renderQuote, renderImage, renderTable, renderParagraph, renderArticleShell, type Theme } from './article-styles/elements';
 import { renderHeadingTemplate } from './article-styles/heading-template';
@@ -6,12 +7,11 @@ import { findStyle, getStyleComponentDefaults } from './styles';
 import { wechatMinLineHeight, wechatTextStyle, wechatBox } from './wechat-typography';
 import { enforceWechatCompliance } from './wechat-compliance';
 import { displayHeadingWithoutNumber, normalizeMarkdownTables } from './ai-layout';
-import { escapeHtml, htmlToPlainText } from './wechat-text';
+import { escapeHtml } from './wechat-text';
 import { safeArticleLink } from './article-link';
 export { escapeHtml, htmlToPlainText } from './wechat-text';
-import { cottonTexture } from './article-styles/paper-texture';
 import { SAMPLE_IMAGE } from './article-styles/sample-image';
-import { isPureWhitePaper, isDarkPaper, inkOn, readableAccent, accentTextOnPaper, paletteForArticle, type Palette } from './article-styles/palette';
+import { isDarkPaper, inkOn, readableAccent, accentTextOnPaper, contrastRatio, paletteForArticle, type Palette } from './article-styles/palette';
 import { resolveArticleHighlight } from './article-styles/highlight';
 export type WechatReadingOptions = {
     fontSize?: number;
@@ -31,7 +31,7 @@ export type WechatReadingOptions = {
     variant?: string;
     /** Resolved article paper (from paperMode follow/style/custom). Ink is recomputed from this. */
     paper?: string;
-    /** Optional WeChat-hosted opaque cotton tile; empty uses the bundled local preview asset. */
+    /** Optional WeChat-hosted opaque paper tile; empty keeps the column paper plain. */
     paperTextureUrl?: string;
 };
 const HEADING_STYLE_IDS = new Set([
@@ -103,7 +103,6 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
     /** Tech chrome tokens — dark Hero/chapter only; body stays light paper. */
     const techDark = '#17363b';
     const techHeroInk = '#e6f0ec';
-    const techChapter = '#102736';
     /** Single soft shadow — WeChat-safe; do not stack. */
     const techSoft = 'box-shadow:0 8px 18px rgba(9,19,31,.14)';
     // Paper comes from paperMode (follow/style/custom) when provided; otherwise the style token.
@@ -145,7 +144,7 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
         list = null;
     };
     const markSkin = resolveArticleHighlight(styleId, marker, palette.paper, palette.ink);
-    const linkAccent = readableAccent(accent);
+    const linkAccent = theme.style.preset ? (contrastRatio(accent,palette.paper)>=4.5?accent:palette.ink) : readableAccent(accent);
     /** Never emit font-size/line-height:inherit — WeChat's checker treats inherit as abnormal. */
     const inline = (value: string, fontSize = 16, _lineHeight = 30) => {
         const type = wechatTextStyle(fontSize);
@@ -155,7 +154,7 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
         const codeBg = darkPaper ? '#2a2e36' : '#eceff3';
         const formatText = (text: string) => escapeHtml(text)
             .replace(/\[\^([\w-]+)\]/g, `<sup style="${wechatTextStyle(11)};color:${accentLabel}">$1</sup>`)
-            .replace(/\*\*(.*?)\*\*/g, `<strong style="${type};font-weight:800">$1</strong>`)
+            .replace(/\*\*(.*?)\*\*/g, `<strong style="${type};${emphasisStyle(theme)}">$1</strong>`)
             .replace(/\*(.*?)\*/g, `<em style="${type}">$1</em>`)
             .replace(/~~(.*?)~~/g, `<span style="text-decoration:line-through;${type}">$1</span>`)
             .replace(/==(.*?)==/g, `<span style="${markSkin.css}${type}">$1</span>`)
@@ -176,6 +175,13 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
         links.forEach((link, index) => { result = result.split(`${tokenPrefix}${index}\uE001`).join(link); });
         return result;
     };
+    // Images are blocks in both the article body and editable component containers.
+    const renderImageLine = (line: string): string | null => {
+        const image = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        if (!image) return null;
+        const source = image[2].startsWith('sample://') ? SAMPLE_IMAGE : image[2];
+        return renderImage(theme, source, image[1], theme.style.imageTreatment, escapeHtml, ++imageIndex);
+    };
     for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
         if (line.startsWith('```')) {
@@ -187,16 +193,13 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
             else {
                 const langRaw = line.slice(3).trim().split(/\s+/)[0] || '';
                 codeLang = /^[a-zA-Z][\w.+#-]*$/.test(langRaw) ? langRaw.toLowerCase() : 'code';
-                const codeMargin = neo ? '16px 8px 16px 0' : '16px 0';
-                const neoFrame = neo ? `border:3px solid ${neoInk};${neoShadow(4)};border-radius:0` : 'border:1px solid #2a2e36;border-radius:8px';
-                // WeChat-safe traffic lights — never use 1px/2px (OA checker flags tiny text nodes).
+                const skin = codeSkin(theme);
                 const dot = (color: string) => `<span style="color:${color};${wechatTextStyle(12)}">●</span>`;
-                const chromeType = wechatBox({ padding: '9px 12px', 'background-color': '#2a2e36', 'box-sizing': 'border-box', 'font-size': 12 });
-                const chromeTableType = wechatBox({ width: '100%', 'border-collapse': 'collapse', border: '0', margin: '0', padding: '0', 'font-size': 12 });
-                const chromeTdType = wechatBox({ padding: '0', border: '0', 'vertical-align': 'middle', 'font-size': 12 });
-                const chrome = `<section style="${chromeType}"><table style="${chromeTableType}"><tr><td style="${chromeTdType};text-align:left">${dot('#ff5f57')}&nbsp;${dot('#febc2e')}&nbsp;${dot('#28c840')}</td><td style="${chromeTdType};text-align:right"><span style="color:#9aa3b2;${wechatTextStyle(11)};font-weight:700;letter-spacing:.04em;font-family:Menlo,Monaco,Consolas,ui-monospace,monospace">${escapeHtml(codeLang)}</span></td></tr></table></section>`;
-                const codeOuterType = wechatBox({ margin: codeMargin, padding: '0', 'background-color': '#1e2128', color: '#e8eaed', 'text-align': 'left', 'box-sizing': 'border-box', 'max-width': '100%', overflow: 'hidden', 'font-size': 13 });
-                output.push(`<section style="${codeOuterType};${neoFrame}">${chrome}<section style="margin:0;padding:12px 14px;background-color:#1e2128;color:#e8eaed;${wechatTextStyle(13)};text-align:left;box-sizing:border-box;max-width:100%;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;font-family:Menlo,Monaco,Consolas,ui-monospace,monospace"><span style="${wechatTextStyle(13)};word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;font-family:Menlo,Monaco,Consolas,ui-monospace,monospace;color:#e8eaed">`);
+                const language = `<span style="${wechatTextStyle(11)};color:${skin.labelInk};font-weight:600;font-family:Menlo,Consolas,monospace">${escapeHtml(codeLang)}</span>`;
+                const chrome = skin.chrome === 'none' ? '' : `<section style="padding:8px 12px;background-color:${skin.header};${wechatTextStyle(12)};border-bottom:1px solid ${palette.line}">${skin.chrome === 'traffic' ? dot('#ff5f57') + '&nbsp;' + dot('#febc2e') + '&nbsp;' + dot('#28c840') + '&nbsp;&nbsp;' : ''}${language}</section>`;
+                const codeOuterType = wechatBox({ margin: skin.margin, padding: '0', 'background-color': skin.background, color: skin.ink, 'text-align': 'left', 'box-sizing': 'border-box', 'max-width': '100%', overflow: theme.style.preset ? 'auto' : 'hidden', 'font-size': skin.size });
+                const codeText = `${wechatTextStyle(skin.size)};word-break:break-word;overflow-wrap:anywhere;white-space:${theme.style.preset ? 'pre' : 'pre-wrap'};font-family:Menlo,Monaco,Consolas,ui-monospace,monospace;color:${skin.ink}`;
+                output.push(`<section style="${codeOuterType};${skin.frame}">${chrome}<section style="margin:0;padding:${skin.padding};background-color:${skin.background};${codeText};text-align:left;box-sizing:border-box;max-width:100%;${theme.style.preset?'overflow-x:auto;':''}"><span style="${codeText}">`);
             }
             inCode = !inCode;
             continue;
@@ -213,7 +216,7 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
                 body.push(lines[index]);
             const kind = component[1] === 'tip' ? 'callout' : component[1] === 'recs' ? 'recommendations' : component[1];
             if (['author', 'follow', 'recommendations'].includes(kind)) closeQuestion();
-            output.push(renderComponent(kind, body, theme, { accent, business, chipInk, corp, darkPaper, editorial, edu, isEvent, isFestival, isOpinion, knowledge, neo, neoInk, neoShadow, palette, pink, pixel, reading, research, styleId, tech, techDark, techHeroInk, techSoft, inline }));
+            output.push(renderComponent(kind, body, theme, { accent, business, chipInk, corp, darkPaper, editorial, edu, isEvent, isFestival, isOpinion, knowledge, neo, neoInk, neoShadow, palette, pink, pixel, reading, research, styleId, tech, techDark, techHeroInk, techSoft, inline, renderImageLine }));
             continue;
         }
         const footnote = line.match(/^\[\^([\w-]+)\]:\s*(.*)$/);
@@ -279,7 +282,9 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
         }
         if (line.startsWith('> ')) {
             closeList();
-            output.push(renderQuote(theme, line.slice(2), inline, quoteIndex++));
+            const quoteLines=[line.slice(2)];
+            if(theme.style.preset) while(index+1<lines.length && /^>(?: |$)/.test(lines[index+1])) quoteLines.push(lines[++index].replace(/^> ?/,''));
+            output.push(renderQuote(theme, quoteLines.join('\n'), inline, quoteIndex++));
             continue;
         }
         const unordered = line.match(/^- (.*)$/);
@@ -295,11 +300,10 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
             continue;
         }
         if (line.startsWith('![')) {
-            const image = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-            if (image) {
-                const source = image[2].startsWith('sample://') ? SAMPLE_IMAGE : image[2];
+            const image = renderImageLine(line);
+            if (image !== null) {
                 closeList();
-                output.push(renderImage(theme, source, image[1], theme.style.imageTreatment, escapeHtml, ++imageIndex));
+                output.push(image);
                 continue;
             }
         }
@@ -330,6 +334,6 @@ export function markdownToWechat(markdown: string, accent: string, marker = '#ff
     const padY = Math.max(8, Math.min(Number.isFinite(reading.padY) ? Number(reading.padY) : findStyle(styleId).reading.padY, 60));
     const requestedTexture = reading.paperTextureUrl?.trim() || '';
     const remoteTexture = /^https:\/\/[^'"<>\s]+$/.test(requestedTexture) ? requestedTexture : '';
-    const texture = theme.style.design === 'cotton' && palette.paper === stylePaper ? remoteTexture || cottonTexture : '';
+    const texture = theme.style.design === 'cotton' && palette.paper === stylePaper ? remoteTexture : '';
     return enforceWechatCompliance(renderArticleShell(theme, article, pad, padY, texture)).html;
 }

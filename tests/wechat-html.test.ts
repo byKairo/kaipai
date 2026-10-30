@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { markdownToWechat, escapeHtml, htmlToPlainText } from '../lib/wechat-html';
 import { styles, getStyleComponentDefaults } from '../lib/styles';
-import { auditWechatHtml } from '../lib/wechat-compliance';
+import { auditWechatHtml, enforceWechatCompliance, repairWechatHtml } from '../lib/wechat-compliance';
 
 const fixture = `# 回归标题
 
@@ -117,6 +117,39 @@ for (const variant of ['克制', '视觉化']) {
   assert.equal(auditWechatHtml(html).length, 0, `${variant}: low line height is repaired`);
   assert.match(html, new RegExp(`font-size:${variant === '克制' ? 14 : 18}px`));
 }
+
+// Repeated clean styles must not hide later invalid occurrences or shift their
+// paragraph numbers; repeated invalid styles still need their own diagnostics.
+const mixedStyles = '<p style="font-size:16px;line-height:32px">第一段</p>'
+  + '<p style="font-size:16px;line-height:32px">第二段</p>'
+  + '<h2 data-case="alpha" style="font-size:20px;line-height:10px">标题甲</h2>'
+  + '<h2 data-case="beta" style="font-size:20px;line-height:10px">标题乙</h2>';
+const mixedViolations = auditWechatHtml(mixedStyles);
+assert.deepEqual(mixedViolations.map(({ index, reason }) => ({ index, reason })), [
+  { index: 3, reason: 'line-height-overlapping' },
+  { index: 4, reason: 'line-height-overlapping' },
+]);
+assert.match(mixedViolations[0].snippet, /data-case="alpha"/);
+assert.match(mixedViolations[1].snippet, /data-case="beta"/);
+const repairedStyles = enforceWechatCompliance(mixedStyles);
+assert.equal(repairedStyles.ok, true);
+assert.equal(repairedStyles.repaired, 2);
+assert.deepEqual(auditWechatHtml(repairedStyles.html), []);
+assert.equal(htmlToPlainText(repairedStyles.html), htmlToPlainText(mixedStyles), 'Repair preserves article text');
+assert.deepEqual(enforceWechatCompliance(repairedStyles.html), { ...repairedStyles, repaired: 0 }, 'A clean fixed point remains unchanged');
+
+const unsafeStyles = '<p style="font-family:Unsupported;font-size:8px;line-height:1.2;height:6px">正文</p>'
+  + '<span style="font-size:inherit;line-height:inherit">强调</span>'
+  + '<img src="https://example.com/kept.png" style="width:100%;height:auto">';
+const onePass = repairWechatHtml(unsafeStyles);
+assert.deepEqual(onePass.remaining, auditWechatHtml(onePass.html), 'Public one-pass repair still reports its own audit');
+const enforced = enforceWechatCompliance(unsafeStyles);
+assert.equal(enforced.ok, true);
+assert.match(enforced.html, /font-size:11px/);
+assert.doesNotMatch(enforced.html, /Unsupported|inherit|height:6px|line-height:1\.2(?:;|")/);
+assert.match(enforced.html, /src="https:\/\/example.com\/kept.png" style="width:100%;height:auto"/);
+assert.equal(htmlToPlainText(enforced.html), htmlToPlainText(unsafeStyles), 'Compliance keeps original text and image');
+
 if (process.env.UPDATE_WECHAT_BASELINES === '1') {
   writeFileSync(baselinePath, `${JSON.stringify(hashes, null, 2)}\n`);
   console.log('Updated output baselines after semantic assertions passed');

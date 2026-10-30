@@ -7,12 +7,19 @@ const root = path.resolve(__dirname, '..');
 assertSafeDeploymentInputs(root);
 const target = path.join(root, '.cloudflare-deploy');
 fs.mkdirSync(target, { recursive: true });
+fs.rmSync(path.join(target, 'verified-build.json'), { force: true });
+const { sourceDigest, createReleaseId } = require('./verify-cloudflare-build.cjs');
+const preparedSource = sourceDigest();
+const commit = /^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA || '') ? process.env.GITHUB_SHA : null;
 for (const name of ['app', 'lib', 'server', 'public']) {
   fs.rmSync(path.join(target, name), { recursive: true, force: true });
   fs.cpSync(path.join(root, name), path.join(target, name), { recursive: true });
 }
 for (const name of ['next.config.mjs', 'next-env.d.ts', 'tsconfig.json']) fs.copyFileSync(path.join(root, name), path.join(target, name));
-for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc', 'worker.ts']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
+for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc', 'worker.ts', 'public-shell-cache.ts']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
+// A fresh preparation may get a different framework BUILD_ID for identical
+// source, so include a per-build nonce as well as the validated source digest.
+fs.writeFileSync(path.join(target, 'public-shell-release.ts'), `export const release = ${JSON.stringify(createReleaseId(preparedSource))};\nexport const sourceCommit = ${JSON.stringify(commit)};\n`);
 if (fs.existsSync(path.join(root, 'cloudflare/package-lock.json'))) fs.copyFileSync(path.join(root, 'cloudflare/package-lock.json'), path.join(target, 'package-lock.json'));
 const manifest = JSON.parse(fs.readFileSync(path.join(target, 'server/skills/manifest.json'), 'utf8'));
 const resources = {};
@@ -33,4 +40,12 @@ source = source.replace("import { readFileSync } from 'node:fs';", "import bundl
   .replace("const root = join(process.cwd(), 'server', 'skills');\n", '')
   .replace(original, '(bundledResources as Record<string, string>)[key]');
 fs.writeFileSync(workflow, source);
+// Keep Cloudflare's native bindings out of the ordinary Next build.
+const assetAdapter = fs.readFileSync(path.join(root, 'cloudflare/image-assets-runtime.ts'), 'utf8')
+  .replace("import type { ImageAssetBindings } from '../lib/server/image-assets-runtime';", "import type { ImageAssetBindings } from './image-assets-types';");
+const assetRuntime = path.join(target, 'lib/server/image-assets-runtime.ts');
+const assetTypes = fs.readFileSync(assetRuntime, 'utf8').split('// Workers preparation')[0];
+fs.writeFileSync(path.join(target, 'lib/server/image-assets-types.ts'), assetTypes);
+fs.writeFileSync(assetRuntime, assetAdapter);
+fs.writeFileSync(path.join(target, 'prepared-source.json'), JSON.stringify({ source: preparedSource, commit }));
 console.log('Cloudflare workspace prepared; Skill hashes verified; no local environment files copied.');

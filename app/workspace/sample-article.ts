@@ -31,10 +31,10 @@ export const sample = `# 把一篇普通原稿，变成可以发布的公众号�
 使用顺序通常是：
 
 1. 先导入或粘贴文章
-2. 生成完整方案，或手动选择 Style
+2. 直接选择本地风格，无需配置 API
 3. 调整主题色、阅读密度与章节标题
 4. 检查配图、代码、表格和局部组件
-5. 复制到公众号，或后续同步到草稿箱
+5. 复制到公众号，或导出 HTML 留存
 
 需要提到一个技术词时，可以使用行内代码，例如 \`Brand Memory\`。需要外部资料，可以放 [示例链接](https://example.com)。
 
@@ -44,7 +44,7 @@ chapter
 
 ## 插图不是“放一张图”，而是文章视觉的一部分
 
-同一张示意图在「科技媒体」「Editorial」「商务简报」「Soft NEO 粗犷」「像素刊物」里，不应该只有圆角不同。楷排会根据当前 Style 改变图片的边框、标签、图注、留白与背景，并让示例插图自动继承当前主题色。
+同一张示意图在「操作教程」「人物叙事」「决策简报」「对话漫画」「夜读散文」里，不应该只有圆角不同。楷排会根据当前 Style 改变图片的边框、标签、图注、留白与背景，并让示例插图自动继承当前主题色。
 
 ![文章结构与配图点位示意](sample://diagram)
 
@@ -54,12 +54,11 @@ chapter
 
 ## 代码与数据也应该属于同一套 Style
 
-代码框统一采用类 Apple 窗口的红黄绿控制点，但窗口标题、边框、阴影与背景会随 Style 改变。
+代码框跟随阅读场景变化：教程采用深色窗口，专栏使用浅底细线，人物叙事减少窗口装饰，简报采用紧凑的语言标签。
 
 \`\`\`js
 async function publish(article) {
-  const plan = await AI.createPlan(article);
-  const html = renderWithStyle(plan.style, article);
+  const html = renderWithStyle(selectedStyle, article);
   return copyToWeChat(html);
 }
 \`\`\`

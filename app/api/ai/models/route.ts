@@ -1,3 +1,4 @@
+import { readResponseJson, RESPONSE_LIMITS } from '../../../../lib/response-body';
 import { apiConnectionFailure } from '../../../../lib/server-endpoint';
 import { NextRequest } from 'next/server';
 import { resolveCredential } from '../../../../lib/server/credentials';
@@ -22,17 +23,17 @@ export async function POST(request: NextRequest) {
     let response: Response;
     try {
       response = await fetch(url, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: controller.signal, cache: 'no-store', redirect: 'manual' });
+      if (!response.ok) return NextResponse.json({ ok: false, error: `模型库暂时不可用（${response.status}）` }, { status: 502 });
+      const payload = await readResponseJson(response, RESPONSE_LIMITS.models);
+      const models: CatalogModel[] = (Array.isArray(payload?.data) ? payload.data : []).slice(0, 30).filter((item: unknown) => Boolean(item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string')).map((item: { id: string; name?: string; description?: string; context_length?: number; pricing?: { prompt?: string; completion?: string } }) => ({
+        id: item.id,
+        name: typeof item.name === 'string' ? item.name : item.id,
+        description: typeof item.description === 'string' ? item.description.slice(0, 220) : '',
+        context: Number(item.context_length) || 0,
+        free: Number(item.pricing?.prompt) === 0 && Number(item.pricing?.completion) === 0,
+      }));
+      return NextResponse.json({ ok: true, models });
     } finally { clearTimeout(timeout); }
-    if (!response.ok) return NextResponse.json({ ok: false, error: `模型库暂时不可用（${response.status}）` }, { status: 502 });
-    const payload = await response.json();
-    const models: CatalogModel[] = (Array.isArray(payload?.data) ? payload.data : []).slice(0, 30).filter((item: unknown) => Boolean(item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string')).map((item: { id: string; name?: string; description?: string; context_length?: number; pricing?: { prompt?: string; completion?: string } }) => ({
-      id: item.id,
-      name: typeof item.name === 'string' ? item.name : item.id,
-      description: typeof item.description === 'string' ? item.description.slice(0, 220) : '',
-      context: Number(item.context_length) || 0,
-      free: Number(item.pricing?.prompt) === 0 && Number(item.pricing?.completion) === 0,
-    }));
-    return NextResponse.json({ ok: true, models });
   } catch (error) {
     const failure = apiConnectionFailure(error, '读取模型列表');
     return NextResponse.json({ ok: false, error: failure.error }, { status: failure.status });

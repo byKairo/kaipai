@@ -1,7 +1,8 @@
 /** This marker is public. The encryption keys and credential contents are server-only. */
+export const LOCAL_CREDENTIAL_PREFIX = 'kplocal1.';
 export const CREDENTIAL_PREFIX = 'kpcred1.';
 export function isSealedCredential(value: unknown): boolean {
-  return typeof value === 'string' && value.startsWith(CREDENTIAL_PREFIX);
+  return typeof value === 'string' && (value.startsWith(CREDENTIAL_PREFIX) || value.startsWith(LOCAL_CREDENTIAL_PREFIX));
 }
 
 export function canonicalCredentialEndpoint(value: string) {

@@ -1,3 +1,5 @@
+
+import { aiFetch } from './ai-transport';
 export type AiProviderId = 'OpenRouter' | 'OpenAI' | 'Anthropic' | 'Gemini' | 'DeepSeek' | 'Qwen' | 'Kimi' | 'Grok' | 'Custom';
 export type AiRequest = { provider: AiProviderId; apiKey: string; endpoint?: string; model?: string; adapter?: 'openai-chat' | 'openai-responses'; system?: string; prompt: string; operation?: 'full' | 'layout' | 'images' | 'title' | 'review' | 'design-recommend' | 'design-compose' | 'design-review'; design?: import('./cover-design').CoverOptions; image?: string; article?: string; preferences?: string; action?: 'plan' | 'test' };
 export type AiResult = { ok: true; text: string; model: string; review?: import('./cover-design').CoverReview } | { ok: false; error: string };
@@ -15,7 +17,7 @@ export const AI_PROVIDER_DEFAULTS: Record<Exclude<AiProviderId, 'Custom'>, { end
 
 export async function requestAi(input: AiRequest, signal?: AbortSignal): Promise<AiResult> {
   try {
-    const response = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), cache: 'no-store', signal });
+    const response = await aiFetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), cache: 'no-store', signal });
     const result = await response.json();
     if (!response.ok || !result?.ok) return { ok: false, error: typeof result?.error === 'string' ? result.error : `请求失败（${response.status}）` };
     return { ok: true, text: String(result.text || ''), model: String(result.model || ''), review: result.review };

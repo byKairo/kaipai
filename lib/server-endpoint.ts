@@ -1,3 +1,4 @@
+import { UpstreamResponseLimitError } from './response-body';
 import { CredentialError } from './server/credential-codec';
 import { lookup, resolve4, resolve6 } from 'node:dns/promises';
 import { isIP } from 'node:net';
@@ -76,6 +77,7 @@ export async function capabilityEndpoint(raw: string, path: 'chat/completions' |
 
 /** Validation errors must be identical across model discovery, text and images; never expose credentials. */
 export function apiConnectionFailure(error: unknown, operation: string) {
+  if (error instanceof UpstreamResponseLimitError) return { status: 502, error: error.message };
   if (error instanceof CredentialError) return { status: error.status, error: error.message };
   if (error instanceof EndpointValidationError) return { status: 400, error: error.message };
   if (error instanceof Error && error.name === 'AbortError') return { status: 504, error: `${operation}超时，请稍后重试` };

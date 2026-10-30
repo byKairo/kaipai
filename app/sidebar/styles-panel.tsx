@@ -1,11 +1,12 @@
+import { FollowComposer } from './follow-composer';
+import ui from './components-panel.module.css';
 import { INSERT_SNIPPETS } from './shared';
-import type { V091SidebarProps } from './shared';
 import type { SidebarModel } from './controller';
 import { AUTO_MARKER, resolveArticleHighlight } from '../../lib/article-styles/highlight';
 export function ComponentsPanel({ model }: {
   model: SidebarModel;
 }) {
-  const { p, highlight, setHighlight, dividerOpen, setDividerOpen, dividerLabel, setDividerLabel, follow, followFields, recTitle, setRecTitle, recStyle, setRecStyle, recUrls, setRecUrls, recBusy, mediaMeta, setFollowField, chooseFollow, insertFollow, insertDivider, fetchRecs } = model;
+  const { p, highlight, setHighlight, dividerOpen, setDividerOpen, dividerLabel, setDividerLabel, recTitle, setRecTitle, recStyle, setRecStyle, recUrls, setRecUrls, recBusy, insertDivider, fetchRecs } = model;
   const mark = resolveArticleHighlight(p.styleId, highlight, p.resolvedPaper);
   return (
     <div className={"side-body"} id={"tab-styles"} hidden={p.tab !== "styles"}>
@@ -14,9 +15,9 @@ export function ComponentsPanel({ model }: {
           {"COMPONENTS"}
         </div>
 
-        <h3 className={"big-side-title"}>
+        <header><h3 className={"big-side-title"}>
           {"补充文章局部结构"}
-        </h3>
+        </h3></header>
 
         <p className={"side-desc"}>
           {"组件只处理局部信息，不和编辑栏的基础格式重复。"}
@@ -25,9 +26,9 @@ export function ComponentsPanel({ model }: {
       </div>
 
       <div className={"sec"}>
-        <h3>
+        <header className={ui.sectionHeading}><h3>
           {"信息强调"}
-        </h3>
+        </h3></header>
 
         <div className={"highlight-component"}>
           <div className={"highlight-copy"}>
@@ -78,19 +79,15 @@ export function ComponentsPanel({ model }: {
 
         </div>
 
-        <p className={"component-note"}>
-          {"局部强调分三层：荧光重点用于句内；重点卡用于独立核心判断；提示卡只用于限制、风险和容易踩坑的事项。三者不要在同一屏里同时堆叠。"}
-        </p>
-
         <div id={"calloutColors"}>
         </div>
 
       </div>
 
       <div className={"sec"}>
-        <h3>
+        <header className={ui.sectionHeading}><h3>
           {"开头 · 署名"}
-        </h3>
+        </h3></header>
 
         <div className={"component-grid two"}>
           <button className={"component-card"} data-neo-block={"block"} data-insert={"lead"} onClick={() => p.onInsertMarkdown(INSERT_SNIPPETS["lead"])}>
@@ -116,9 +113,9 @@ export function ComponentsPanel({ model }: {
       </div>
 
       <div className={"sec"}>
-        <h3>
+        <header className={ui.sectionHeading}><h3>
           {"装饰分割"}
-        </h3>
+        </h3></header>
 
         <p className={"component-note"}>
           {"用于章节换气或文末模块前。建议全文 1–2 次。"}
@@ -214,151 +211,18 @@ export function ComponentsPanel({ model }: {
       </div>
 
       <div className={"sec"}>
-        <h3>
+        <header className={ui.sectionHeading}><h3>
           {"文末关注"}
-        </h3>
+        </h3></header>
 
-        <p className={"component-note"}>
-          {"选择结构，再编辑文字。颜色自动继承当前主题色。"}
-        </p>
-
-        <div className={"follow-template-grid"} id={"followTemplateGrid"}>
-          <button type={"button"} data-follow-template={"minimal"} data-label={"极简文字"} className={"" + ((follow) === "minimal" ? ' active' : '')} onClick={() => chooseFollow("minimal")}>
-            <span className={"ft ft-minimal"}>
-              <em>
-                {"关注我们"}
-              </em>
-              <i>
-                {"→"}
-              </i>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"brand"} data-label={"品牌色"} className={"" + ((follow) === "brand" ? ' active' : '')} onClick={() => chooseFollow("brand")}>
-            <span className={"ft ft-brand"}>
-              <em>
-                {"关注我们"}
-              </em>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"card"} data-label={"轻卡片"} className={"" + ((follow) === "card" ? ' active' : '')} onClick={() => chooseFollow("card")}>
-            <span className={"ft ft-card"}>
-              <em>
-                {"持续更新"}
-              </em>
-              <small>
-                {"关注"}
-              </small>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"neo"} data-label={"粗犷"} className={"" + ((follow) === "neo" ? ' active' : '')} onClick={() => chooseFollow("neo")}>
-            <span className={"ft ft-neo"}>
-              <em>
-                {"＋ 关注"}
-              </em>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"qr"} data-label={"二维码"} className={"" + ((follow) === "qr" ? ' active' : '')} onClick={() => chooseFollow("qr")}>
-            <span className={"ft ft-qr"}>
-              <i>
-              </i>
-              <em>
-                {"扫码"}
-              </em>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"avatar"} data-label={"作者头像"} className={"" + ((follow) === "avatar" ? ' active' : '')} onClick={() => chooseFollow("avatar")}>
-            <span className={"ft ft-avatar"}>
-              <i>
-                {"头"}
-              </i>
-              <em>
-                {"作者"}
-              </em>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"split"} data-label={"左图右文"} className={"" + ((follow) === "split" ? ' active' : '')} onClick={() => chooseFollow("split")}>
-            <span className={"ft ft-split"}>
-              <i>
-              </i>
-              <em>
-                {"图文"}
-              </em>
-            </span>
-          </button>
-
-          <button type={"button"} data-follow-template={"account"} data-label={"公众号名片"} className={"" + ((follow) === "account" ? ' active' : '')} onClick={() => chooseFollow("account")}>
-            <span className={"ft ft-account"}>
-              <i>
-                {"号"}
-              </i>
-              <em>
-                {"名片"}
-              </em>
-            </span>
-          </button>
-
-        </div>
-
-        <div className={"follow-editor"}>
-          <div className={"follow-editor-grid"}>
-            <input id={"followTitle"} placeholder={"主标题"} value={followFields[0]} onChange={e => { setFollowField(0, e.target.value); }} />
-
-            <input id={"followCopy"} placeholder={"一句说明"} value={followFields[1]} onChange={e => { setFollowField(1, e.target.value); }} />
-
-            <input id={"followCta"} placeholder={"行动文案"} value={followFields[2]} onChange={e => { setFollowField(2, e.target.value); }} />
-
-            <input id={"followHref"} placeholder={"可选：可点击 https:// 链接"} value={followFields[4]} onChange={e => { setFollowField(4, e.target.value); }} />
-
-          </div>
-
-          <p className={"component-note"} style={{ "marginTop": "7px" } as React.CSSProperties}>
-            {"普通 HTML 不能直接触发“关注公众号”。二维码型最可靠；如账号具备正文链接权限，可填写 https:// 链接。公众号原生名片需在微信后台插入。"}
-          </p>
-
-          <div className={"follow-media"} id={"followMediaFields"} hidden={!mediaMeta[follow]}>
-            <div>
-              <b id={"followMediaLabel"}>
-                {mediaMeta[follow]?.[0]}
-              </b>
-              <span id={"followMediaHint"}>
-                {mediaMeta[follow]?.[1]}
-                。本地图片仅用于预览，发布前需转为微信可访问素材。
-              </span>
-            </div>
-
-            <div className={"follow-media-actions"}>
-              <input id={"followMediaUrl"} placeholder={"https://..."} value={followFields[3]} onChange={e => { setFollowField(3, e.target.value); }} />
-              <label className="btn" id="followChooseMedia">选择图片
-                <input type="file" accept="image/*" hidden onChange={e => {
-                  const file = e.target.files?.[0]; if(file) {
-                    const reader = new FileReader();
-                    reader.onload = () => setFollowField(3, String(reader.result || ''));
-                    reader.readAsDataURL(file);
-                  } e.target.value = '';
-                }} />
-              </label>
-            </div>
-
-          </div>
-
-          <button className={"btn"} id={"insertFollow"} onClick={() => { insertFollow(); }}>
-            {"插入关注模块"}
-          </button>
-
-        </div>
+        <FollowComposer model={model} />
 
       </div>
 
       <div className={"sec"}>
-        <h3>
+        <header className={ui.sectionHeading}><h3>
           {"文末推荐"}
-        </h3>
+        </h3></header>
 
         <input id={"recTitle"} placeholder={"推荐区标题"} value={recTitle} onChange={e => { setRecTitle(e.target.value); }} />
         <select id={"recStyle"} value={recStyle} onChange={e => { setRecStyle(e.target.value); }}>

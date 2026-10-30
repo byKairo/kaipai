@@ -1,5 +1,6 @@
+import type { LayoutReview } from '../../lib/layout-review';
 import type { AiPlanOptions, ImageScope, ImageTarget } from '../../lib/ai-workbench';
-import { styles } from '../../lib/styles';
+import { allStyles as styles } from '../../lib/styles';
 export type V091SideTab = "ai" | "layout" | "styles" | "drafts";
 export type StyleItem = {
   id: string;
@@ -51,6 +52,11 @@ export type V091SidebarProps = {
   onOpenApiSettings?: () => void;
   onApplyAiPlan?: () => boolean | void;
   aiHasPendingPlan?: boolean;
+  aiLayoutReview?: LayoutReview;
+  aiSelectedSuggestions?: string[];
+  aiSelectionError?: string;
+  onIgnoreSuggestion?: (id: string) => void;
+  onToggleSuggestion?: (id: string) => void;
   onDiscardAiPlan?: () => void;
   onRetryAiPlan?: () => void;
   onPlanStyleChange?: (id: string) => void;
@@ -73,11 +79,14 @@ export type V091SidebarProps = {
     status: 'idle' | 'loading' | 'done' | 'error';
     error?: string;
   }>;
-  aiSavedImages?: Array<{
-    id: string;
-    brief: string;
-    src: string;
-  }>;
+  aiSavedImages?: import('../../lib/generated-images').GeneratedImage[];
+  aiImageHistoryLoading?: boolean;
+  aiImageHistoryHasMore?: boolean;
+  aiImageHistoryError?: string;
+  onLoadMoreSavedImages?: () => void;
+  aiImageHistoryDeletingId?: string;
+  aiImageHistoryDeleteError?: string;
+  onDeleteSavedImage?: (id: string) => Promise<boolean>;
   onPreviewSavedImage?: (id: string) => void;
   onGenerateAiImage?: (id: string, prompt: string, ratios: string[], visualStyle: string, imageText?: string) => void;
   onInsertAiImage?: (src: string, brief: string, target?: ImageTarget) => void;
@@ -154,34 +163,8 @@ export const VARIANT_LABEL: Record<string, string> = {
 // voice 观点媒体: opinion, tech, research
 // brand 商务品牌: business, corp, festival
 // pulse 活动个性: event, boldneo, pixelpost
-export const STYLE_ORDER = [
-  "knowledge",
-  "editorial",
-  "edu",
-  "opinion",
-  "tech",
-  "research",
-  "business",
-  "corp",
-  "festival",
-  "event",
-  "boldneo",
-  "pixelpost",
-] as const;
-export const STYLE_FAMILY: Record<(typeof STYLE_ORDER)[number], "read" | "voice" | "brand" | "pulse"> = {
-  knowledge: "read",
-  editorial: "read",
-  edu: "read",
-  opinion: "voice",
-  tech: "voice",
-  research: "voice",
-  business: "brand",
-  corp: "brand",
-  festival: "brand",
-  event: "pulse",
-  boldneo: "pulse",
-  pixelpost: "pulse",
-};
+export const STYLE_ORDER = ['v4-editorial','v4-journal','v4-night','v4-minimal','v4-blueprint','v4-brutal','v4-magazine','v4-morandi','v4-cinnabar','v4-book','v4-comic','v4-corporate'] as const;
+export const STYLE_FAMILY: Record<string, "read" | "voice" | "brand" | "pulse"> = Object.fromEntries(STYLE_ORDER.map((id,i)=>[id, i<4?'read':i<8?'voice':i<10?'brand':'pulse'])) as Record<string,"read" | "voice" | "brand" | "pulse">;
 export const STYLE_NAMES = Object.fromEntries(styles.map(style => [style.id, style.name])) as Record<(typeof STYLE_ORDER)[number], string>;
 export const STYLE_SUMMARY = Object.fromEntries(styles.map(style => [style.id, style.grammar])) as Record<(typeof STYLE_ORDER)[number], string>;
 /** Final V091 heading library (late v072 splice — same ids, updated labels/previews). */

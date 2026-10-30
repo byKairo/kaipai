@@ -36,9 +36,6 @@ const BLOCK_SHELL =
 
 const STYLE_TAG_RE = /<([a-zA-Z0-9]+)([^>]*?)style="([^"]*)"/g;
 
-const SAFE_FONT_FAMILY_RE =
-  /Menlo|Monaco|Consolas|ui-monospace|monospace|PingFang|Microsoft YaHei|Noto Sans|Noto Serif|Songti|SimSun|Kaiti|KaiTi|FangSong|STFangsong|LXGW|Zhuque|system-ui/i;
-
 type LhParse = {
   kind: 'px' | 'unitless' | 'em' | 'percent' | 'other' | 'missing';
   px: number;
@@ -106,6 +103,9 @@ function stripExoticFonts(style: string): string {
 /** Audit every styled tag against plugin_spec 1.3-ish static rules. */
 export function auditWechatHtml(html: string): WechatViolation[] {
   const violations: WechatViolation[] = [];
+  // Paragraphs and inline marks commonly repeat a style. Cache only clean
+  // combinations within this audit; position and image-only context still vary.
+  const cleanStyles = new Set<string>();
   let blockIndex = 0;
   const re = new RegExp(STYLE_TAG_RE.source, 'g');
   let match: RegExpExecArray | null;
@@ -120,6 +120,9 @@ export function auditWechatHtml(html: string): WechatViolation[] {
     const textish = TEXTISH.test(tag);
     if (BLOCK_SHELL.test(tag)) blockIndex += 1;
     const index = BLOCK_SHELL.test(tag) ? blockIndex : Math.max(1, blockIndex);
+    const styleKey = `${tag}\0${imageOnly ? 1 : 0}\0${style}`;
+    if (cleanStyles.has(styleKey)) continue;
+    const previousViolations = violations.length;
 
     const hasFs = /font-size\s*:/i.test(style);
     const fontPx = parseFontSizePx(style, 16);
@@ -191,6 +194,7 @@ export function auditWechatHtml(html: string): WechatViolation[] {
         }
       }
     }
+    if (violations.length === previousViolations) cleanStyles.add(styleKey);
   }
   return violations;
 }
@@ -268,18 +272,24 @@ function repairOneStyle(tag: string, rawStyle: string, imageOnly: boolean): { st
   return { style, changed: style !== before };
 }
 
-/** Repair styled tags in place; returns repaired HTML + count + remaining audit. */
-export function repairWechatHtml(html: string): {
+/** Repair without auditing intermediate output that the caller will rewrite. */
+function repairStyles(html: string): {
   html: string;
   repaired: number;
-  remaining: WechatViolation[];
 } {
   let repaired = 0;
+  const styles = new Map<string, ReturnType<typeof repairOneStyle>>();
   const next = html.replace(STYLE_TAG_RE, (full, tag: string, attrs: string, raw: string, offset: number) => {
     if (SKIP_TYPE.test(tag)) return full;
     const openEnd = offset + full.length;
     const imageOnly = isImageOnlyInner(html, openEnd);
-    const { style, changed } = repairOneStyle(tag, raw, imageOnly);
+    const key = `${tag}\0${imageOnly ? 1 : 0}\0${raw}`;
+    let result = styles.get(key);
+    if (!result) {
+      result = repairOneStyle(tag, raw, imageOnly);
+      styles.set(key, result);
+    }
+    const { style, changed } = result;
     if (changed || style !== raw) repaired += 1;
     return `<${tag}${attrs}style="${style}"`;
   });
@@ -289,8 +299,17 @@ export function repairWechatHtml(html: string): {
     .replace(/font-size:\s*inherit/gi, 'font-size:16px')
     .replace(/line-height:\s*inherit/gi, `line-height:${wechatMinLineHeight(16)}px`);
 
-  const remaining = auditWechatHtml(hardened);
-  return { html: hardened, repaired, remaining };
+  return { html: hardened, repaired };
+}
+
+/** Repair styled tags in place; retain the public one-pass repair/audit contract. */
+export function repairWechatHtml(html: string): {
+  html: string;
+  repaired: number;
+  remaining: WechatViolation[];
+} {
+  const result = repairStyles(html);
+  return { ...result, remaining: auditWechatHtml(result.html) };
 }
 
 /** Repair then re-audit; ok iff remaining empty. */
@@ -300,15 +319,16 @@ export function enforceWechatCompliance(html: string): {
   violations: WechatViolation[];
   repaired: number;
 } {
-  const { html: repairedHtml, repaired, remaining } = repairWechatHtml(html);
+  const first = repairStyles(html);
   // Second pass catches anything the first rewrite introduced.
-  const second = repairWechatHtml(repairedHtml);
+  // If the first pass left the HTML unchanged, it is already a fixed point.
+  const second = first.html === html ? { html, repaired: 0 } : repairStyles(first.html);
   const violations = auditWechatHtml(second.html);
   return {
     html: second.html,
     ok: violations.length === 0,
     violations,
-    repaired: repaired + second.repaired,
+    repaired: first.repaired + second.repaired,
   };
 }
 

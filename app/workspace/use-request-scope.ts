@@ -4,22 +4,41 @@ import { useEffect, useRef } from 'react';
 
 export function createRequestScopeState() {
   let source = { articleId: '', content: '', generation: 0 };
-  const sequences = new Map<string, number>();
+  const requests = new Map<string, AbortController>();
+  const abortAll = () => {
+    const pending = Array.from(requests.values());
+    requests.clear();
+    pending.forEach(controller => controller.abort());
+  };
   return {
     update(articleId: string, content: string) {
-      if (source.articleId !== articleId || source.content !== content) source.generation += 1;
+      if (source.articleId !== articleId || source.content !== content) {
+        source.generation += 1;
+        abortAll();
+      }
       source = { ...source, articleId, content };
     },
-    invalidate() { source.generation += 1; },
-    cancel(channel: string) { sequences.set(channel, (sequences.get(channel) || 0) + 1); },
+    invalidate() { source.generation += 1; abortAll(); },
+    cancel(channel: string) {
+      const controller = requests.get(channel);
+      requests.delete(channel);
+      controller?.abort();
+    },
     begin(channel: string) {
       const snapshot = { ...source };
-      const sequence = (sequences.get(channel) || 0) + 1;
-      sequences.set(channel, sequence);
-      return () => source.generation === snapshot.generation
+      const controller = new AbortController();
+      const previous = requests.get(channel);
+      requests.set(channel, controller);
+      previous?.abort();
+      const isCurrent = () => !controller.signal.aborted
+        && source.generation === snapshot.generation
         && source.articleId === snapshot.articleId
         && source.content === snapshot.content
-        && sequences.get(channel) === sequence;
+        && requests.get(channel) === controller;
+      return Object.assign(isCurrent, {
+        signal: controller.signal,
+        finish() { if (requests.get(channel) === controller) requests.delete(channel); },
+      });
     },
   };
 }

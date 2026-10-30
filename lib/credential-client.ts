@@ -1,8 +1,10 @@
+
+import { aiFetch } from './ai-transport';
 import type { ApiProfile } from './api-profiles';
 import { isSealedCredential } from './credential-format';
 
 export async function protectApiProfile(profile: ApiProfile): Promise<ApiProfile> {
-  const response = await fetch('/api/credentials/seal', {
+  const response = await aiFetch('/api/credentials/seal', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store',
     body: JSON.stringify({ provider: profile.provider, baseUrl: profile.baseUrl, workspaceId: profile.workspaceId || '', apiKey: profile.apiKey }),
   });

@@ -336,139 +336,7 @@
 #kaipai-studio .advanced-settings[open] > summary { border-bottom: 2px solid #1b1b1b !important; }
 #kaipai-studio .advanced-settings .advanced-body { padding: 12px !important; }
 
-#kaipai-studio .api-settings-backdrop { padding:16px; }
-#kaipai-studio .api-settings-modal { display:flex; flex-direction:column; width:min(760px,100%); height:min(760px,calc(100dvh - 32px)); max-height:calc(100dvh - 32px); padding:0 !important; overflow:hidden; border:3px solid #1b1b1b !important; border-radius:14px !important; box-shadow:8px 8px 0 #1b1b1b !important; background:#fffefb !important; color:#171717; }
-#kaipai-studio .api-settings-header { position:relative; flex:none; padding:18px 50px 17px; border-bottom:3px solid #1b1b1b; text-align:center; }
-#kaipai-studio .api-settings-kicker { color:#b33863; font:900 10px ui-monospace,monospace; letter-spacing:.12em; }
-#kaipai-studio .api-settings-header h2 { margin:4px 0 2px; font-size:30px; line-height:1.2; }
-#kaipai-studio .api-settings-header p { margin:0; color:#655d50; font-size:13px; font-weight:700; }
-#kaipai-studio .api-settings-close { position:absolute; top:14px; right:17px; width:34px; height:34px; border:2px solid #1b1b1b; border-radius:8px; background:#fff; font-size:24px; line-height:1; cursor:pointer; }
-#kaipai-studio .api-settings-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:19px 24px 22px; }
-#kaipai-studio .api-form-field select { box-sizing:border-box; width:100%; min-height:44px; margin-top:6px; padding:9px 11px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; color:#171717; font-size:13px; }
-#kaipai-studio .api-quick-models { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:18px; }
-#kaipai-studio .api-discover { padding:9px 16px; border:2px solid #1b1b1b; border-radius:7px; background:#dff6fa; font-size:13px; font-weight:800; cursor:pointer; }
-#kaipai-studio .api-quick-check { display:flex; align-items:flex-start; gap:8px; margin:8px 0 18px; font-size:12px; line-height:1.5; color:#514f49; }
-#kaipai-studio .api-quick-check input { flex:none; margin-top:3px; }
-#kaipai-studio .api-advanced-toggle { display:block; margin:14px 0; padding:5px 0; border:0; background:transparent; color:#615f5b; font-size:12px; text-decoration:underline; cursor:pointer; }
-#kaipai-studio .api-profile-manager { margin-bottom:22px; padding:14px; border:2px solid #1b1b1b; border-radius:10px; background:#eef9fb; }
-#kaipai-studio .api-profile-list { display:grid; gap:7px; margin:10px 0; }
-#kaipai-studio .api-profile-item { display:flex; align-items:center; gap:7px; min-width:0; padding:8px; border:1.5px solid #1b1b1b; border-radius:7px; background:#fff; }
-#kaipai-studio .api-profile-item > div { flex:1; min-width:0; }
-#kaipai-studio .api-profile-item b,#kaipai-studio .api-profile-item small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#kaipai-studio .api-profile-item b { font-size:12px; }
-#kaipai-studio .api-profile-item small { color:#565b60; font-size:10px; }
-#kaipai-studio .api-profile-item button { flex:none; padding:5px 8px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; font-size:10px; font-weight:850; }
-#kaipai-studio .api-role-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
-#kaipai-studio .api-role-picker { position:relative; min-width:0; font-size:11px; font-weight:850; }
-#kaipai-studio .api-role-picker > span { display:block; margin-bottom:5px; }
-#kaipai-studio .api-role-trigger { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:39px; padding:7px 9px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; box-shadow:2px 2px 0 #1b1b1b; text-align:left; font:inherit; font-size:12px; font-weight:800; cursor:pointer; }
-#kaipai-studio .api-role-trigger span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#kaipai-studio .api-role-trigger strong { flex:none; font-size:17px; }
-#kaipai-studio .api-role-menu { position:absolute; z-index:20; top:100%; left:0; right:0; max-height:210px; overflow-y:auto; margin-top:5px; padding:5px; border:2px solid #1b1b1b; border-radius:8px; background:#fff; box-shadow:4px 4px 0 #1b1b1b; }
-#kaipai-studio .api-role-menu button { display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%; padding:9px; border:0; border-radius:5px; background:#fff; text-align:left; font-size:11px; font-weight:800; cursor:pointer; }
-#kaipai-studio .api-role-menu button:hover,#kaipai-studio .api-role-menu button.active { background:#ffe163; }
-#kaipai-studio .api-step-heading { display:flex; align-items:flex-start; gap:10px; margin:18px 0 12px; }
-#kaipai-studio .api-step-heading > span { display:grid; place-items:center; flex:none; width:31px; height:31px; border:2px solid #1b1b1b; border-radius:7px; background:#ffe163; font:900 12px ui-monospace,monospace; }
-#kaipai-studio .api-step-heading h3 { margin:0; font-size:17px; line-height:1.2; }
-#kaipai-studio .api-step-heading p { margin:3px 0 0; color:#615f5b; font-size:11px; font-weight:700; line-height:1.4; }
-#kaipai-studio .api-credential-fields { margin-top:16px; padding:16px 16px 1px; border:2px solid #1b1b1b; border-radius:10px; background:#f5f9fa; }
-#kaipai-studio .api-capability-card { margin:0 0 13px; padding:15px; border:2px solid #1b1b1b; border-radius:10px; background:#fff; }
-#kaipai-studio .api-capability-card .api-field-head { margin-bottom:9px; }
-#kaipai-studio .api-model-entry { display:flex; gap:8px; align-items:stretch; }
-#kaipai-studio .api-model-entry input { box-sizing:border-box; min-width:0; flex:1; min-height:45px; padding:9px 12px; border:2px solid #1b1b1b; border-radius:7px; outline:none; background:#fff; font-size:14px; box-shadow:3px 3px 0 #1b1b1b; }
-#kaipai-studio .api-model-entry input:focus { border-color:#175bd9; }
-#kaipai-studio .api-model-entry button { flex:none; min-width:108px; padding:7px 10px; border:2px solid #1b1b1b; border-radius:7px; background:#dff6fa; box-shadow:3px 3px 0 #1b1b1b; font-size:12px; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-sync-help { margin:3px 0 9px; color:#5c5f65; font-size:11px; line-height:1.5; }
-#kaipai-studio .api-advanced-protocol { margin-top:13px; color:#555; font-size:11px; }
-#kaipai-studio .api-advanced-protocol summary { width:max-content; cursor:pointer; font-weight:800; }
-#kaipai-studio .api-advanced-protocol p { margin:8px 0; line-height:1.5; }
-#kaipai-studio .api-protocol-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
-#kaipai-studio .api-protocol-options button { min-width:0; min-height:65px; padding:9px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; text-align:left; cursor:pointer; }
-#kaipai-studio .api-protocol-options button.active { background:#ffe163; box-shadow:2px 2px 0 #1b1b1b; }
-#kaipai-studio .api-protocol-options b,#kaipai-studio .api-protocol-options small { display:block; }
-#kaipai-studio .api-protocol-options b { font-size:12px; }
-#kaipai-studio .api-protocol-options small { margin-top:4px; color:#525252; font-size:10px; line-height:1.4; }
-#kaipai-studio .api-picker-panel { margin-top:13px; padding:12px; border:2px solid #1b1b1b; border-radius:8px; background:#f4fbfd; box-shadow:3px 3px 0 #1b1b1b; }
-#kaipai-studio .api-picker-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
-#kaipai-studio .api-picker-header b { font-size:13px; }
-#kaipai-studio .api-picker-header button { padding:5px 8px; border:1.5px solid #1b1b1b; border-radius:5px; background:#fff; font-size:10px; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-picker-search { box-sizing:border-box; width:100%; min-height:39px; margin-bottom:9px; padding:8px 10px; border:2px solid #1b1b1b; border-radius:6px; background:#fff; font-size:12px; }
-#kaipai-studio .api-field-head { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:5px 10px; margin-bottom:8px; }
-#kaipai-studio .api-field-head h3,#kaipai-studio .api-field-head label { margin:0; font-size:16px; font-weight:900; }
-#kaipai-studio .api-field-head span { color:#756a5a; font-size:11px; font-weight:700; }
-#kaipai-studio .api-field-head a { color:#171717; font-size:11px; font-weight:850; text-decoration:underline; }
-#kaipai-studio .api-endpoint-reset { padding:3px 7px; border:1.5px solid #1b1b1b; border-radius:6px; background:#fff; color:#1b1b1b; font-size:10px; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-endpoint-reset:hover { background:#ffdf59; }
-#kaipai-studio .api-provider-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:0 0 10px; padding:9px; border:2px solid #1b1b1b; border-radius:10px; background:#58cbe2; box-shadow:4px 4px 0 #1b1b1b; }
-#kaipai-studio .api-provider-grid button { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:4px; min-width:0; min-height:62px; padding:8px 12px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; box-shadow:3px 3px 0 #1b1b1b; text-align:left; cursor:pointer; }
-#kaipai-studio .api-provider-grid button b { font-size:17px; line-height:1.1; }
-#kaipai-studio .api-provider-grid button small { font-size:10px; font-weight:750; color:#62676a; }
-#kaipai-studio .api-provider-grid button.active { background:#ff83ae; }
-#kaipai-studio .api-provider-grid button.active small { color:#292022; }
-#kaipai-studio .api-other-providers { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:14px 0 19px; }
-#kaipai-studio .api-other-providers span { margin-right:3px; color:#655d50; font-size:11px; font-weight:800; }
-#kaipai-studio .api-other-providers button { min-height:29px; padding:4px 9px; border:1.5px solid #1b1b1b; border-radius:7px; background:#fff; font-size:11px; font-weight:800; cursor:pointer; }
-#kaipai-studio .api-other-providers button.active { background:#ffe163; box-shadow:2px 2px 0 #1b1b1b; }
-#kaipai-studio .api-form-field { margin:0 0 16px; }
-#kaipai-studio .api-form-field input,#kaipai-studio .api-model-search input { display:block; box-sizing:border-box; width:calc(100% - 4px); min-height:45px; margin:0 4px 4px 0; padding:9px 12px; border:2px solid #1b1b1b; border-radius:7px; outline:none; background:#fff; box-shadow:4px 4px 0 #1b1b1b; color:#1b1b1b; font-size:15px; }
-#kaipai-studio .api-form-field input:focus,#kaipai-studio .api-model-search input:focus { border-color:#175bd9; box-shadow:4px 4px 0 #1b1b1b; }
-#kaipai-studio .api-form-field input[readonly] { background:#f2f5f5; color:#51565a; }
-#kaipai-studio .api-region-choice { display:flex; gap:7px; margin-top:8px; }
-#kaipai-studio .api-region-choice button { min-height:29px; padding:4px 12px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; font-size:11px; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-region-choice button.active { background:#ffdf59; box-shadow:2px 2px 0 #1b1b1b; }
-#kaipai-studio .api-key-field { display:flex; align-items:stretch; gap:9px; }
-#kaipai-studio .api-key-field input { min-width:0; flex:1; }
-#kaipai-studio .api-key-field button { min-width:58px; margin-bottom:4px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-key-hint { margin:8px 0 0; color:#50545a; font-size:11px; font-weight:700; line-height:1.5; }
-#kaipai-studio .api-model-section { margin-top:8px; }
-#kaipai-studio .api-model-trigger { display:flex; align-items:center; justify-content:space-between; gap:10px; width:calc(100% - 4px); min-height:50px; padding:8px 12px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; box-shadow:4px 4px 0 #1b1b1b; text-align:left; cursor:pointer; }
-#kaipai-studio .api-model-trigger span { min-width:0; }
-#kaipai-studio .api-model-trigger b,#kaipai-studio .api-model-trigger small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#kaipai-studio .api-model-trigger b { font-size:15px; }
-#kaipai-studio .api-model-trigger small { margin-top:3px; color:#61666a; font-size:11px; }
-#kaipai-studio .api-model-trigger strong { font-size:21px; }
-#kaipai-studio .api-model-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
-#kaipai-studio .api-model-choices button { display:flex; flex-direction:column; gap:3px; min-width:0; padding:10px; border:2px solid #1b1b1b; border-radius:8px; background:#fff; text-align:left; cursor:pointer; }
-#kaipai-studio .api-model-choices button.active { background:#dff6fa; box-shadow:3px 3px 0 #1b1b1b; }
-#kaipai-studio .api-model-choices button b { font-size:13px; }
-#kaipai-studio .api-model-choices button span { font-size:11px; font-weight:700; }
-#kaipai-studio .api-model-choices button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#62686a; font-size:10px; }
-#kaipai-studio .api-model-manual { margin-top:12px; }
-#kaipai-studio .api-model-manual label { display:block; margin-bottom:7px; font-size:12px; font-weight:850; }
-#kaipai-studio .api-model-search { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-#kaipai-studio .api-model-search > span { font-size:25px; font-weight:800; }
-#kaipai-studio .api-model-search input { min-width:0; flex:1; }
-#kaipai-studio .api-model-search button { min-height:43px; margin-bottom:4px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; font-weight:850; cursor:pointer; }
-#kaipai-studio .api-model-list { max-height:206px; overflow-y:auto; border:3px solid #1b1b1b; border-radius:8px; background:#fff; }
-#kaipai-studio .api-model-list > button { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; min-height:68px; padding:9px 12px; border:0; border-bottom:1px solid #bfc9cc; border-radius:0; background:#fff; text-align:left; cursor:pointer; }
-#kaipai-studio .api-model-list > button:hover { background:#effbfe; }
-#kaipai-studio .api-model-list > button.active { background:#dff6fa; }
-#kaipai-studio .api-model-list > button:last-child { border-bottom:0; }
-#kaipai-studio .api-model-main { display:block; min-width:0; }
-#kaipai-studio .api-model-main b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
-#kaipai-studio .api-model-main small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; color:#5c5047; font-size:11px; }
-#kaipai-studio .api-model-description { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; margin-top:5px; color:#62686a; font-size:10px; line-height:1.3; }
-#kaipai-studio .api-model-meta { display:flex; align-items:center; gap:7px; flex:none; }
-#kaipai-studio .api-model-meta em { padding:3px 5px; border:2px solid #1b1b1b; background:#6bdda0; font-size:10px; font-style:normal; font-weight:850; }
-#kaipai-studio .api-model-meta small { font-size:10px; font-weight:800; }
-#kaipai-studio .api-model-meta strong { font-size:20px; }
-#kaipai-studio .api-model-empty { margin:0; padding:15px; color:#635b50; font-size:12px; }
-#kaipai-studio .api-local-card { margin:10px 0 18px; padding:18px; border:3px solid #1b1b1b; border-radius:9px; background:#d9f7e9; box-shadow:4px 4px 0 #1b1b1b; }
-#kaipai-studio .api-local-card b { font-size:18px; }
-#kaipai-studio .api-local-card p { margin:6px 0 0; color:#3b574a; font-size:12px; }
-#kaipai-studio .api-settings-note { margin:14px 0 0; padding:9px 11px; border:1px solid #c8d5d9; border-radius:7px; background:#f1f9fb; color:#414c50; font-size:11px; line-height:1.5; }
-#kaipai-studio .api-test-result { margin-top:12px; padding:10px; border:2px solid #1b1b1b; border-radius:8px; font-size:12px; font-weight:700; }
-#kaipai-studio .api-test-result.success { background:#d9f8e9; }
-#kaipai-studio .api-test-result.error { background:#ffe5e5; }
-#kaipai-studio .api-settings-actions { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:center; gap:9px; flex:none; margin:0; padding:14px 20px; border-top:3px solid #1b1b1b; background:#fffefb; }
-#kaipai-studio .api-settings-actions button { min-height:43px; padding:8px 12px; border:2px solid #1b1b1b; border-radius:7px; background:#fff; box-shadow:3px 3px 0 #1b1b1b; font-size:13px; font-weight:900; cursor:pointer; }
-#kaipai-studio .api-settings-actions .api-save { background:#65dba1; }
-#kaipai-studio .api-settings-actions.api-quick-actions { grid-template-columns:minmax(0,1fr) auto; }
-#kaipai-studio .api-settings-actions .api-test { background:#60cde1; }
-#kaipai-studio .api-settings-actions .api-reset { background:#ffda56; }
-#kaipai-studio .api-settings-actions button:disabled { opacity:.55; cursor:wait; }
-@media(max-width:620px) { #kaipai-studio .api-settings-scroll { padding:16px; } #kaipai-studio .api-provider-grid { gap:5px; padding:6px; } #kaipai-studio .api-provider-grid button { gap:4px; min-height:55px; padding:6px; } #kaipai-studio .api-provider-grid button b { font-size:12px; } #kaipai-studio .api-provider-grid button small { font-size:9px; } #kaipai-studio .api-settings-actions { grid-template-columns:1fr 1fr; padding:12px 16px; } #kaipai-studio .api-model-entry { flex-direction:column; } #kaipai-studio .api-model-entry button { min-height:39px; } }
-@media(max-width:620px) { #kaipai-studio .api-protocol-options { grid-template-columns:1fr; } }
+/* AI connection manager: ink, cyan and pink with deliberately offset layers. */
 #kaipai-studio > footer { background: #fff5d0 !important; border-top: 2px solid #1b1b1b !important; }
 
 #kaipai-studio .ai-plan-result { min-width:0; }
@@ -636,8 +504,7 @@
   }
   #kaipai-studio .v091-top-actions .studio-copy { order:0; }
   #kaipai-studio .v091-editor > header { min-width:0; gap:5px; }
-  #kaipai-studio .v091-editor > header b small,
-  #kaipai-studio .v091-input-mode { display:none; }
+  #kaipai-studio .v091-editor > header b small { display:none; }
   #kaipai-studio .v091-editor > header button { margin-left:auto; white-space:nowrap; }
   #kaipai-studio .v091-rich-editor { padding:15px 14px 52px!important; }
   #kaipai-studio .v091-preview-bg { padding:8px 6px 18px!important; }

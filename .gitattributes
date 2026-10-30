@@ -1,0 +1,2 @@
+# Retained build assets are immutable, SHA-256 verified generated files.
+cloudflare/asset-history/_next/static/** -whitespace linguist-generated=true

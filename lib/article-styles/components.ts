@@ -1,4 +1,4 @@
-import { wechatTextStyle, wechatMinLineHeight } from '../wechat-typography';
+import { wechatTextStyle } from '../wechat-typography';
 import { escapeHtml } from '../wechat-text';
 import { SAMPLE_IMAGE } from './sample-image';
 import { readableAccent, hexLuminance, accentTextOnPaper, inkOn, type Palette } from './palette';
@@ -30,10 +30,11 @@ export type ComponentContext = {
     techHeroInk: string;
     techSoft: string;
     inline: InlineRenderer;
+    renderImageLine: (line: string) => string | null;
 };
 /** Pure component rendering: no document, clipboard, storage or DOM access. */
 export function renderComponent(kind: string, body: string[], theme: Theme, context: ComponentContext): string {
-    const { accent, business, chipInk, corp, darkPaper, editorial, edu, isEvent, isFestival, isOpinion, knowledge, neo, neoInk, neoShadow, palette, pink, pixel, reading, research, styleId, tech, techDark, techHeroInk, techSoft, inline } = context;
+    const { accent, business, corp, darkPaper, edu, neo, neoInk, neoShadow, palette, pixel, research, styleId, tech, techDark, techHeroInk, techSoft, inline } = context;
     const output: string[] = [];
     // `inner` for follow/recs is built ad hoc; callout boxes build `boxedInner` with box-local ink.
     if (kind === 'compare') {
@@ -311,5 +312,5 @@ export function renderComponent(kind: string, body: string[], theme: Theme, cont
         output.push(`<p style="margin:28px 0;text-align:center;color:${accent};${wechatTextStyle(16)}">${divider}</p>`);
         return output.join('');
     }
-    return renderCallout(theme, kind, body, inline);
+    return renderCallout(theme, kind, body, inline, context.renderImageLine);
 }

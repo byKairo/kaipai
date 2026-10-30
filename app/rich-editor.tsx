@@ -14,7 +14,7 @@ import { Markdown } from '@tiptap/markdown';
 import type { ArticleDocument } from '../lib/document';
 import { createArticleReviewPlugin, type ReviewState } from '../lib/article-review';
 
-type Props = { value: string; document?: ArticleDocument | null; onChange: (document: ArticleDocument, markdown: string) => void; onReady: (editor: Editor | null) => void; htmlToImport?: string; onReviewState?: (state: ReviewState) => void };
+export type RichEditorProps = { value: string; document?: ArticleDocument | null; onChange: (document: ArticleDocument, markdown: string, edited?: boolean) => void; onReady: (editor: Editor | null) => void; htmlToImport?: string; onReviewState?: (state: ReviewState) => void };
 const ArticleReview = Extension.create<{ onChange: (state: ReviewState) => void }>({
   name: 'articleReview',
   addOptions: () => ({ onChange: () => {} }),
@@ -65,25 +65,32 @@ const CommunityBlock = Node.create({
   },
 });
 
-export default function RichEditor({ value, document, onChange, onReady, htmlToImport, onReviewState }: Props) {
+export default function RichEditor({ value, document, onChange, onReady, htmlToImport, onReviewState }: RichEditorProps) {
   const reviewCallback = useRef(onReviewState);
   reviewCallback.current = onReviewState;
+  // Parent echoes this same snapshot back. Only external document loads need a comparison.
+  const emittedDocument = useRef<ArticleDocument | null>(null);
+  const emitChange = (current: Editor, edited = false) => {
+    const next = current.getJSON() as ArticleDocument;
+    emittedDocument.current = next;
+    onChange(next, current.getMarkdown(), edited);
+  };
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [StarterKit.configure({ link: false }), Highlight, CaptionImage, Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }), TableKit.configure({ table: { resizable: true } }), CommunityBlock, Markdown, ArticleReview.configure({ onChange: state => reviewCallback.current?.(state) })],
     content: value,
     contentType: 'markdown',
     editorProps: { attributes: { class: 'v091-rich-editor', 'aria-label': '文章编辑区' } },
-    onUpdate: ({ editor: current }) => onChange(current.getJSON() as ArticleDocument, current.getMarkdown()),
+    onUpdate: ({ editor: current }) => emitChange(current, true),
   });
 
   useEffect(() => { onReady(editor); return () => onReady(null); }, [editor, onReady]);
   useEffect(() => {
-    if (!editor || !document) return;
+    if (!editor || !document || document === emittedDocument.current) return;
     const next = JSON.stringify(document);
-    if (JSON.stringify(editor.getJSON()) === next) return;
+    if (JSON.stringify(editor.getJSON()) === next) { emittedDocument.current = document; return; }
     editor.commands.setContent(document, { emitUpdate: false });
-    onChange(editor.getJSON() as ArticleDocument, editor.getMarkdown());
+    emitChange(editor);
   }, [editor, document, onChange]);
   useEffect(() => {
     // When `document` is provided (opening a saved article), it is the source of truth.
@@ -94,7 +101,7 @@ export default function RichEditor({ value, document, onChange, onReady, htmlToI
     const current = editor.getMarkdown();
     if (value !== current) {
       editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
-      onChange(editor.getJSON() as ArticleDocument, editor.getMarkdown());
+      emitChange(editor);
     }
   }, [editor, value, document, onChange]);
   const lastHtmlImportRef = useRef<string>('');
@@ -102,7 +109,7 @@ export default function RichEditor({ value, document, onChange, onReady, htmlToI
     if (!editor || !htmlToImport || htmlToImport === lastHtmlImportRef.current) return;
     lastHtmlImportRef.current = htmlToImport;
     editor.commands.setContent(htmlToImport, { contentType: 'html', emitUpdate: false });
-    onChange(editor.getJSON() as ArticleDocument, editor.getMarkdown());
+    emitChange(editor);
   }, [editor, htmlToImport, onChange]);
 
   return <EditorContent editor={editor} className="v091-rich-editor-shell" />;

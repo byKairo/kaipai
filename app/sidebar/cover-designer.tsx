@@ -1,5 +1,7 @@
 'use client';
 
+import { aiFetch } from '../../lib/ai-transport';
+
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ApiProfile, ApiProfileRoles, ApiModelConfig } from '../../lib/api-profiles';
@@ -8,7 +10,7 @@ import { checkCoverRatio, resolveCoverRatio, parseCoverPrompt, parseCoverRecomme
 import { saveGeneratedImage, type GeneratedImage } from '../../lib/generated-images';
 import ui from '../ai-workspace.module.css';
 
-export type CoverContext = { article: string; articleId: string; profiles: ApiProfile[]; roles: ApiProfileRoles; savedImages: GeneratedImage[]; onSaved: (image: GeneratedImage) => void; configure: () => void };
+export type CoverContext = { article: string; articleId: string; profiles: ApiProfile[]; roles: ApiProfileRoles; onSaved: (image: GeneratedImage) => void; configure: () => void };
 type Candidate = { id: string; styleName: string; src: string; prompt: string; options: CoverOptions; width: number; height: number; generationRatio: string; review?: CoverReview; error?: string; saved?: boolean };
 type Connection = { profile: ApiProfile; model: ApiModelConfig };
 function textInput(connection: Connection): Pick<AiRequest, 'provider' | 'apiKey' | 'endpoint' | 'model' | 'adapter'> {
@@ -17,8 +19,8 @@ function textInput(connection: Connection): Pick<AiRequest, 'provider' | 'apiKey
 function articleTitle(article: string) { return article.split('\n').find(line => line.trim())?.replace(/^#{1,6}\s*/, '').trim() || ''; }
 function fileExtension(src: string) { return src.startsWith('data:image/jpeg') ? 'jpg' : src.startsWith('data:image/webp') ? 'webp' : 'png'; }
 
-export function CoverDesigner({ context }: { context: CoverContext }) {
-  const { article, articleId, profiles, roles, savedImages, onSaved, configure } = context;
+export function CoverDesigner({ context, active = true }: { context: CoverContext; active?: boolean }) {
+  const { article, articleId, profiles, roles, onSaved, configure } = context;
   const [mode, setMode] = useState<CoverMode | ''>('');
   const [title, setTitle] = useState(articleTitle(article));
   const [ratio, setRatio] = useState<CoverRatio>('2.35:1');
@@ -52,6 +54,9 @@ export function CoverDesigner({ context }: { context: CoverContext }) {
     setTitle(articleTitle(article));
     return () => controller.current?.abort();
   }, [article, articleId, profiles, roles]);
+  useEffect(() => {
+    if (!active) { controller.current?.abort(); setPhase(''); }
+  }, [active]);
   useEffect(() => {
     setStyles([]); setCatalogError(''); setSelected([]); setRecommendations([]); setResults([]);
     if (!mode) return;
@@ -108,7 +113,7 @@ export function CoverDesigner({ context }: { context: CoverContext }) {
     const cover: CoverRecord = { options: candidate.options, prompt: candidate.prompt, review, width: candidate.width, height: candidate.height, requestedRatio: candidate.options.aspectRatio, generationRatio: candidate.generationRatio, skillVersion: version };
     const image: GeneratedImage = { id: candidate.id, src: candidate.src, brief: `封面｜${candidate.styleName}`, prompt: candidate.prompt, createdAt: Date.now(), cover };
     if (job.signal.aborted) return;
-    await saveGeneratedImage(image); if (!job.signal.aborted) onSaved(image);
+    await saveGeneratedImage(image, job.signal); if (!job.signal.aborted) onSaved(image);
   }
   function update(candidate: Candidate) { setResults(current => [...current.filter(item => item.id !== candidate.id), candidate]); }
 
@@ -128,7 +133,7 @@ export function CoverDesigner({ context }: { context: CoverContext }) {
           const composed = await ask('design-compose', design, connection, job);
           const prompt = parseCoverPrompt(composed.text);
           setPhase(`正在生成 · ${styleName} · ${attempt}/${budget}`);
-          const response = await fetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: job.signal, cache: 'no-store', body: JSON.stringify({ provider: imageProfile.provider, baseUrl: imageProfile.baseUrl, apiKey: imageProfile.apiKey, model: imageModel.modelId, adapter: imageModel.adapter, aspectRatio: design.aspectRatio, design, prompt }) });
+          const response = await aiFetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: job.signal, cache: 'no-store', body: JSON.stringify({ provider: imageProfile.provider, baseUrl: imageProfile.baseUrl, apiKey: imageProfile.apiKey, model: imageModel.modelId, adapter: imageModel.adapter, aspectRatio: design.aspectRatio, design, prompt }) });
           const data = await response.json();
           if (!response.ok || !data.ok || typeof data.src !== 'string') throw new Error(data.error || '图片生成失败');
           if (job.signal.aborted) return;
@@ -203,7 +208,6 @@ export function CoverDesigner({ context }: { context: CoverContext }) {
       {candidate.review && <><p className={ui.imageDescription}>{candidate.review.status === 'passed' ? candidate.review.evidence : candidate.review.feedback || candidate.review.evidence}</p><details className={ui.details}><summary>查看审核依据</summary>{Object.entries(candidate.review.checks).map(([key, check]) => <p key={key}>{({ text: '文字', content: '内容', action: '结构与动作', style: '风格', readability: '展示效果', preservation: '保留项' } as Record<string, string>)[key]} · {({ pass: '通过', fail: '需修正', unverified: '未验证', not_applicable: '不适用' })[check.status]}：{check.evidence}</p>)}</details></>}
       {candidate.review?.status === 'passed' ? <a className={ui.primary} href={candidate.src} download={`楷排封面-${candidate.options.styleId}.${fileExtension(candidate.src)}`}>下载封面</a> : <button className={ui.secondary} disabled={busy} onClick={() => retryReview(candidate)}>重试看图审核</button>}
     </article>)}</div>}
-    {!!savedImages.filter(image => image.cover?.review.status === 'passed').length && <details className={ui.history}><summary>已审核封面</summary><div>{savedImages.filter(image => image.cover?.review.status === 'passed').map(image => <a key={image.id} href={image.src} download={`楷排封面-${image.id}.${fileExtension(image.src)}`}><img src={image.src} alt={image.brief} /><span>{image.brief} · 下载</span></a>)}</div></details>}
     {preview && <CoverPreview candidate={preview} onClose={() => setPreview(null)} />}
   </section>;
 }

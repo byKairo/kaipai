@@ -42,6 +42,15 @@ export async function run() {
     assert.equal(calls.length, before, 'identification never probes a public host');
     globalThis.fetch = async () => Response.json({ message: 'unrelated server' });
     assert.equal(await localAuthHeader(baseUrl, signal), 'Authorization', 'generic OpenAI-compatible servers keep Bearer authentication');
+    let probeCancelled = false;
+    globalThis.fetch = async () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode('x'.repeat(4097))); },
+      cancel() { probeCancelled = true; },
+    }), { headers: { 'content-type': 'application/json' } });
+    assert.equal(await localAuthHeader(baseUrl, signal), 'Authorization');
+    assert.ok(probeCancelled, 'server identification bounds streamed bytes, not a fully allocated string');
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { permissions: { async query({ name }: { name: string }) { return { state: name === 'loopback-network' ? 'denied' : 'prompt' }; } } } });
+    assert.equal(await localPermissionState(), 'denied', 'loopback denial takes precedence over the legacy permission alias');
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { permissions: { async query() { return { state: 'denied' }; } } } });
     assert.equal(await localPermissionState(), 'denied');
     assert.match((await localConnectionFailure()).message, /浏览器已禁止/);

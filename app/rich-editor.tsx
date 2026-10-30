@@ -77,7 +77,7 @@ export default function RichEditor({ value, document, onChange, onReady, htmlToI
   };
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit.configure({ link: false }), Highlight, CaptionImage, Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }), TableKit.configure({ table: { resizable: true } }), CommunityBlock, Markdown, ArticleReview.configure({ onChange: state => reviewCallback.current?.(state) })],
+    extensions: [StarterKit.configure({ link: false }), Highlight, CaptionImage.configure({ allowBase64: true }), Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' } }), TableKit.configure({ table: { resizable: true } }), CommunityBlock, Markdown, ArticleReview.configure({ onChange: state => reviewCallback.current?.(state) })],
     content: value,
     contentType: 'markdown',
     editorProps: { attributes: { class: 'v091-rich-editor', 'aria-label': '文章编辑区' } },

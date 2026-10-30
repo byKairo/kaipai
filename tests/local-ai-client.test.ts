@@ -50,6 +50,17 @@ export async function run() {
     globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
     await assert.rejects(localAiFetch('/api/ai', { ...body, action: 'test' }), /跨域访问/);
     await assert.rejects(localAiFetch('/api/ai', { ...body, baseUrl: 'https://example.com/v1' }), /仅用于本机/);
+    for (const path of ['/api/ai/connection-models', '/api/ai/image']) {
+      let cancelled = false;
+      globalThis.fetch = async input => String(input).endsWith('/')
+        ? Response.json({ message: 'unrelated server' })
+        : new Response(new ReadableStream({
+          start(controller) { controller.enqueue(new Uint8Array(64)); },
+          cancel() { cancelled = true; },
+        }), { headers: { 'content-type': 'application/json', 'content-length': String(40 * 1024 * 1024) } });
+      await assert.rejects(localAiFetch(path, { ...body, action: 'test', prompt: 'test' }), /返回的数据过大/);
+      assert.ok(cancelled, 'oversized local responses stop reading before JSON allocation');
+    }
   } finally { globalThis.fetch = original; }
   console.log('PASS: local discovery, chat, responses, images, credential isolation, old-key migration, errors');
 }

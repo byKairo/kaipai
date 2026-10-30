@@ -141,18 +141,21 @@ export async function run() {
     assert.deepEqual((await storage.listArticles()).map(item => item.id), ['fallback-b', 'article-a'], 'consecutive failed saves preserve both articles');
     await storage.saveArticle({ ...article, markdown: 'older version', updatedAt: 1 });
     assert.equal((await storage.getArticle(article.id))?.markdown, article.markdown, 'older fallback saves do not overwrite newer ones');
-    assert.equal(await storage.deleteArticle(fallbackB.id), true);
+    assert.equal(await storage.deleteArticle(fallbackB.id), false, 'unavailable DB cannot prove a recovery-only deletion is complete');
+    assert.deepEqual((await storage.listArticles()).map(item => item.id), ['fallback-b', 'article-a'], 'failed deletion preserves recoverable content');
     storage.rememberActiveArticle(article.id);
     assert.deepEqual(await storage.getArticle(), article);
-    assert.deepEqual(await storage.listArticles(), [article]);
     assert.equal(await storage.deleteArticle('unknown'), false);
     replace('window', { indexedDB: db });
+    assert.equal(await storage.deleteArticle(fallbackB.id), true, 'deletion can be retried when storage recovers');
     assert.deepEqual(await storage.listArticles(), [article]); // recover fallback into DB
     assert.equal(local.getItem('kaipai.article.fallback.v1'), null);
     const updated = { ...article, markdown: article.markdown + '\n修改内容', updatedAt: 5 };
     db.setFailWrites(true);
     await storage.saveArticle(updated);
     assert.deepEqual(await storage.listArticles(), [updated]);
+    assert.equal(await storage.deleteArticle(updated.id), false, 'a failed DB deletion must not remove only the newer checkpoint');
+    assert.equal((await storage.getArticle(updated.id))?.markdown, updated.markdown, 'failed deletion preserves the latest version');
     assert.ok(local.getItem('kaipai.articles.recovery.v1'), 'failed recovery keeps the per-article fallback');
     const updatedB = { ...article, id: 'failed-write-b', updatedAt: 6 };
     await storage.saveArticle(updatedB);
@@ -227,8 +230,12 @@ export async function run() {
     assert.equal((await storage.listArticles())[0].markdown, '未来checkpoint');
     storage.persistRecoveryArticles([{ ...recoveryB, updatedAt: 30 }]);
     replace('window', {});
+    assert.equal(await storage.deleteArticle('recovery-b'), false);
+    assert.ok((await storage.listArticles()).some(item => item.id === 'recovery-b'), 'unavailable database preserves the checkpoint for a later retry');
+    replace('window', { indexedDB: db });
     assert.equal(await storage.deleteArticle('recovery-b'), true);
-    assert.ok(!(await storage.listArticles()).some(item => item.id === 'recovery-b'), 'offline deletion removes recovery bucket entry');
+    assert.equal(await storage.getArticle('recovery-b'), null, 'retried deletion removes both database and recovery copies');
+    replace('window', {});
     local.setItem('kaipai.articles.recovery.v1', '{broken');
     assert.deepEqual(await storage.listArticles(), [], 'corrupt recovery bucket fails gracefully');
     // Migrate actual v4-shaped records, keeping structured JSON, Markdown, style and appearance.

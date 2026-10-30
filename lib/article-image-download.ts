@@ -66,7 +66,7 @@ export async function createArticleImagePackage(images: PublicationImage[], read
     }
     if (!count) throw new Error(`所有图片下载失败：${failures[0] || '图片不可读取'}`);
     zip.file('图片与图注.txt', entries.join('\n'));
-    zip.file('上传说明.txt', '这是自动转存失败时的备用原图包，不是正常复制所必需的步骤。\n1. 优先回到楷排重试自动转存，成功后复制完整图文。\n2. 如需手动处理，可先导出 HTML 留存排版，按图片与图注.txt 中的编号在公众号原位置插入对应图片。\n3. 保存草稿并预览，检查图片和排版。\n\nPNG/JPEG 保留原图；SVG 等转为 PNG。图片文件不包含外层排版边框，外框与背景属于正文 HTML。');
+    zip.file('上传说明.txt', '这是文章备用原图包，包含原图与图注。\n1. 本地图片可使用楷排插件上传到微信，再复制完整图文。\n2. 如需手动处理，可先导出 HTML 留存排版，按图片与图注.txt 中的编号在公众号原位置插入对应图片。\n3. 保存草稿并预览，检查图片和排版。\n\nPNG/JPEG 保留原图；SVG 等转为 PNG。图片文件不包含外层排版边框，外框与背景属于正文 HTML。');
     if (failures.length) zip.file('未下载图片.txt', failures.join('\n\n'));
     return { blob: await zip.generateAsync({ type: 'blob' }), count, failed: failures.length };
 }

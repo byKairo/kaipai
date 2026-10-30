@@ -50,6 +50,9 @@
   #kaipai-studio .api-footer-buttons .api-save { flex:1.6; gap:4px; }
   #kaipai-studio .api-settings-modal .api-quick-models { grid-template-columns:1fr; gap:4px; }
 }
+#kaipai-studio .api-local-permission { margin:0 0 16px; padding:12px 14px; border:1px solid #b8b09b; border-radius:8px; background:#fff9e5; color:#3f392f; font-size:12px; line-height:1.7; }
+#kaipai-studio .api-local-permission strong { display:block; font-size:13px; }
+#kaipai-studio .api-local-permission p { margin:4px 0 0; }
 #kaipai-studio .api-directory-status { margin:0 0 12px; color:#57515e; font-size:11px; }
 #kaipai-studio .api-key-field .api-discover { min-width:88px; background:#65e6dc; margin:0; }
 #kaipai-studio .api-settings-modal button { transition:background-color 120ms ease,filter 120ms ease; }

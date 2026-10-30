@@ -11,6 +11,11 @@ export function escapeHtml(value: string) {
 export function htmlToPlainText(html: string): string {
   if (typeof DOMParser !== 'undefined') {
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script,style,template').forEach(node => node.remove());
+    doc.querySelectorAll('br').forEach(node => node.replaceWith(doc.createTextNode('\n')));
+    // textContent alone joins adjacent paragraphs and table cells together.
+    doc.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,tr,div,section,blockquote,pre').forEach(node => node.after(doc.createTextNode('\n')));
+    doc.querySelectorAll('td,th').forEach(node => node.after(doc.createTextNode('\t')));
     return (doc.body?.textContent || '')
       .replace(/\u00a0/g, ' ')
       .replace(/[ \t]+\n/g, '\n')

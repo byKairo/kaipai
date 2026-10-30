@@ -1,4 +1,5 @@
 'use client';
+import { ResponsiveActions } from './workspace/responsive-actions';
 import PlatformStatus from './platform-status';
 import { restoreApiProfiles } from '../lib/credential-client';
 
@@ -438,8 +439,8 @@ export default function Page() {
     if (!file) return;
     const isCurrent = requestScope.begin('import');
     try {
-      if (/\.docx$/i.test(file.name)) {
-        const html = await importDocx(file);
+      if (/\.(docx|html?)$/i.test(file.name)) {
+        const html = /\.docx$/i.test(file.name) ? await importDocx(file) : await file.text();
         if (!isCurrent()) return;
         flushArticle();
         invalidateArticleRequests();
@@ -450,18 +451,18 @@ export default function Page() {
       } else {
         const raw = await file.text();
         if (!isCurrent()) return;
-        const next = /\.html?$/i.test(file.name) ? new DOMParser().parseFromString(raw, 'text/html').body.innerText : raw;
         flushArticle();
         invalidateArticleRequests();
         setActiveArticleId(crypto.randomUUID());
         setDocumentJson(null);
         setHtmlToImport('');
-        loadMarkdown(next);
+        loadMarkdown(raw);
       }
       say(`已导入 ${file.name}`);
     } catch (error) {
       say(error instanceof Error ? error.message : '导入失败，请换一份文稿后重试');
     } finally {
+      isCurrent.finish();
       input.value = '';
     }
   };
@@ -469,13 +470,15 @@ export default function Page() {
     const input = event.currentTarget;
     const file = input.files?.[0]; if (!file) return;
     const isCurrent = requestScope.begin('insert-image');
-    const src = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
-    input.value = '';
-    if (!isCurrent()) return;
-    const alt = file.name.replace(/\.[^.]+$/, '') || '文章配图';
-    if (richEditorRef.current) richEditorRef.current.chain().focus().setImage({ src, alt }).run();
-    else apply(`![${alt}](${src})`);
-    input.value = '';
+    try {
+      const src = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('图片读取失败，请重新选择文件')); reader.readAsDataURL(file); });
+      if (!isCurrent()) return;
+      const alt = file.name.replace(/\.[^.]+$/, '') || '文章配图';
+      if (richEditorRef.current) richEditorRef.current.chain().focus().setImage({ src, alt }).run();
+      else apply(`![${alt}](${src})`);
+    } catch (error) {
+      if (isCurrent()) say(error instanceof Error ? error.message : '图片读取失败');
+    } finally { input.value = ''; isCurrent.finish(); }
   };
   const openEditorAction = (action: 'link' | 'image' | 'caption') => {
     const editor = richEditorRef.current;
@@ -825,7 +828,7 @@ export default function Page() {
     <header className="v091-topbar">
       <div className="v091-brand"><b>楷</b><span><strong>楷排 <i>v0.91</i></strong><small>ARTICLE LAYOUT WORKSPACE</small></span></div>
       <button className={`v091-top-chip v091-api-status ${apiProvider !== '本地模拟' && textApiKey ? 'connected' : 'disconnected'}`} onClick={() => setApiOpen(true)}><span className="v091-api-indicator" aria-hidden="true" />AI {apiProvider === '本地模拟' || !textApiKey ? '可选 · 未连接' : '已配置'}</button>
-      <div className="v091-top-actions"><label className="v091-btn">↥ 导入<input ref={articleInputRef} type="file" accept=".md,.markdown,.txt,.html,.htm,.docx" onChange={importFile} /></label><button className="v091-btn studio-copy" disabled={tab === 'ai' && Boolean(proposalPreview)} title={tab === 'ai' && proposalPreview ? '请先应用排版或保留原文' : undefined} onClick={copy}>⧉ 复制公众号</button><button className="v091-btn" onClick={() => void downloadArticleImages()}>↓ 下载图片</button><button className="v091-btn" disabled={tab === 'ai' && Boolean(proposalPreview)} onClick={exportWechatHtml}>↓ 导出 HTML</button><button className="v091-btn" onClick={() => download(`${content.split('\n').find(Boolean)?.replace(/^#+\s*/, '') || '楷排文章'}.md`, content, 'text/markdown;charset=utf-8')}>↓ 导出 Markdown</button><button className="v091-top-help" aria-label="使用帮助" onClick={() => setHelpOpen(true)}>?</button></div>
+      <div className="v091-top-actions"><label className="v091-btn">↥ 导入<input ref={articleInputRef} type="file" accept=".md,.markdown,.txt,.html,.htm,.docx" onChange={importFile} /></label><button className="v091-btn studio-copy" disabled={tab === 'ai' && Boolean(proposalPreview)} title={tab === 'ai' && proposalPreview ? '请先应用排版或保留原文' : undefined} onClick={copy}>⧉ 复制公众号</button><ResponsiveActions><button className="v091-btn" onClick={() => void downloadArticleImages()}>↓ 下载图片</button><button className="v091-btn" disabled={tab === 'ai' && Boolean(proposalPreview)} onClick={exportWechatHtml}>↓ 导出 HTML</button><button className="v091-btn" onClick={() => download(`${content.split('\n').find(Boolean)?.replace(/^#+\s*/, '') || '楷排文章'}.md`, content, 'text/markdown;charset=utf-8')}>↓ 导出 Markdown</button><button className="v091-top-help" aria-label="使用帮助" onClick={() => setHelpOpen(true)}><span className="v091-help-icon" aria-hidden="true">?</span><span className="v091-help-label">使用帮助</span></button></ResponsiveActions></div>
     </header>
     <nav className="v091-mobile-switch" aria-label="移动端面板切换">
       {([{ id: 'styles', text: '样式' }, { id: 'edit', text: '编辑' }, { id: 'preview', text: '预览' }] as const).map((item) => (
@@ -1043,7 +1046,7 @@ export default function Page() {
           onHorizontalRule={() => { if (richEditorRef.current) { richEditorRef.current.chain().focus().setHorizontalRule().run(); return; } apply('---'); }} /></fieldset>
         {editorAction && <form className="v091-editor-action" onSubmit={(event) => { event.preventDefault(); submitEditorAction(); }}><label>{editorAction === 'link' ? '输入链接地址' : editorAction === 'image' ? '输入图片地址' : '编辑图片说明'}<input autoFocus value={editorActionValue} onChange={(event) => setEditorActionValue(event.target.value)} placeholder={editorAction === 'caption' ? '写一句图片说明' : 'https://...'} /></label><button type="submit">确认</button><button type="button" onClick={() => setEditorAction(null)}>取消</button></form>}
         <input ref={imageInputRef} className="v091-hidden-input" type="file" accept="image/*" onChange={insertImage} />
-        <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={activeArticleId || 'initial'} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onReviewState={articleReview.setReview} /></div>
+        <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={!activeArticleId || activeArticleId === initialArticleId.current ? 'initial' : activeArticleId} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onReviewState={articleReview.setReview} /></div>
         {articleReview.active && <ArticleReviewPopover editor={richEditorRef.current} item={articleReview.active} onAdopt={articleReview.adopt} onIgnore={articleReview.dismiss} onClose={() => articleReview.select(null)} />}
         {aiRevision && <AiRevisionDialog label={aiRevision.kind === 'title' ? '标题建议对照' : '润色对照'} onClose={() => { requestScope.cancel('revision'); setAiRevision(null); }}>
           <div className="ai-revision-head"><b>{aiRevision.kind === 'title' ? '标题建议' : '润色批改'}</b><button type="button" onClick={() => { requestScope.cancel('revision'); setAiRevision(null); }} aria-label="关闭批改框">×</button></div>
@@ -1055,7 +1058,7 @@ export default function Page() {
         </AiRevisionDialog>}
         <textarea className="v091-legacy-source" ref={editorRef} aria-label="Markdown 源文稿" value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); } }} tabIndex={-1} />
       </section>
-      <ArticlePreview key={activeArticleId || 'initial'} styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
+      <ArticlePreview key={!activeArticleId || activeArticleId === initialArticleId.current ? 'initial' : activeArticleId} styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
         background={paperMode === 'follow' ? undefined : paperMode === 'custom' ? paperColor : styleDef.paper || '#ffffff'}
         proposal={tab === 'ai' ? proposalPreview : undefined}
         markdown={content} accent={accent} marker={markerColor} sidePadding={padX} eyebrow={pixelLabel} reading={wechatReading} scrollRef={previewScrollRef} onScroll={onPreviewScroll} />

@@ -1,3 +1,4 @@
+import { boundedResponseChunks, readResponseJson, RESPONSE_LIMITS } from './response-body';
 import { identifyApiAddress } from './api-setup';
 import { isLocalApi } from './ai-transport';
 import { parseModelDirectory } from './model-discovery';
@@ -35,8 +36,9 @@ async function stableImage(src: string, signal: AbortSignal) {
   // Never send the API credential to a returned image URL.
   const response = await upstream(url.toString(), { signal });
   if (!response.headers.get('content-type')?.startsWith('image/')) throw new Error('图片地址未返回图片');
-  const blob = await response.blob();
-  if (blob.size > 24 * 1024 * 1024) throw new Error('图片超过 24 MB');
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of boundedResponseChunks(response, 24 * 1024 * 1024)) chunks.push(chunk);
+  const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'image/png' });
   return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('无法读取生成图片')); reader.readAsDataURL(blob); });
 }
 export async function localAiFetch(path: string, body: Body, signal?: AbortSignal): Promise<Response> {
@@ -54,7 +56,7 @@ export async function localAiFetch(path: string, body: Body, signal?: AbortSigna
     const authHeader = await localAuthHeader(base, controller.signal);
     if (path === '/api/ai/connection-models') {
       const response = await upstream(`${base}/models`, { signal: controller.signal }, key, authHeader);
-      return json({ ok: true, models: parseModelDirectory(await response.json()), source: 'connection', fetchedAt: new Date().toISOString() });
+      return json({ ok: true, models: parseModelDirectory(await readResponseJson(response, RESPONSE_LIMITS.models)), source: 'connection', fetchedAt: new Date().toISOString() });
     }
     const post = (endpoint: string, data: unknown) => upstream(`${base}/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal: controller.signal }, key, authHeader);
     const model = String(body.model || '').trim();
@@ -75,7 +77,7 @@ export async function localAiFetch(path: string, body: Body, signal?: AbortSigna
       const chat = body.adapter === 'antigravity-gemini-image-chat';
       const imageRequest = buildImageRequestBody({ model, prompt, adapter: chat ? 'antigravity-gemini-image-chat' : 'openai-images', aspectRatio: body.aspectRatio });
       const response = await post(chat ? 'chat/completions' : 'images/generations', imageRequest.body);
-      const raw = await response.json();
+      const raw = await readResponseJson(response, RESPONSE_LIMITS.image);
       const image = chat ? raw.choices?.[0]?.message?.images?.[0] : raw.data?.[0];
       const src = pickOpenAiImageSrc(image);
       if (!src) throw new Error('模型未返回图片');

@@ -12,6 +12,8 @@ import { requestAi, type AiProviderId } from '../lib/providers';
 import { connectionRoles, savedConnectionRoles, saveConnection } from '../lib/api-connection-state';
 import { defaultImageAdapter, type ApiProfile, type ApiProfileRoles } from '../lib/api-profiles';
 import { identifyApiAddress } from '../lib/api-setup';
+import { localPermissionState } from '../lib/local-api-access';
+import { useLocalApiPermission } from './workspace/use-local-api-permission';
 
 export type ApiSettingsValue = { provider: '本地模拟' | AiProviderId; apiKey: string; model: string; endpoint: string };
 
@@ -24,6 +26,8 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
   const drafts = useRef(new Map<string, { endpoint: string; apiKey: string; textModel: string; imageModel: string; profileName: string; textAdapter: ApiProfile['adapters']['text'] }>());
   const [editingId, setEditingId] = useState(initial?.id || '');
   const [endpoint, setEndpoint] = useState(initial?.baseUrl || '');
+  const localConnection = isLocalApi(endpoint);
+  const localPermission = useLocalApiPermission(localConnection);
   const [apiKey, setApiKey] = useState(initial?.apiKey || '');
   const [textModel, setTextModel] = useState(initial?.models.text || '');
   const [imageModel, setImageModel] = useState(initial?.models.image || '');
@@ -33,6 +37,9 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
   const [models, setModels] = useState<DiscoveryModel[]>([]);
   const [directoryNote, setDirectoryNote] = useState('');
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (localPermission === 'granted') setError(current => /浏览器已禁止楷排访问本机 API/.test(current) ? '' : current);
+  }, [localPermission]);
   const [referenceProvider, setReferenceProvider] = useState<ReferenceProvider>('OpenAI');
   const [referenceBusy, setReferenceBusy] = useState(false);
   const [referenceNote, setReferenceNote] = useState('');
@@ -85,6 +92,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
     finally { if (!controller.signal.aborted && alive.current) setReferenceBusy(false); }
   };
   const discover = async () => {
+    if (localConnection && localPermission === 'denied') { setError(''); setNotice(''); return; }
     let connection: ReturnType<typeof identifyApiAddress>;
     try {
       connection = identifyApiAddress(endpoint);
@@ -103,6 +111,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
       setModels(list); setStage('ready'); setDirectoryNote(`接口已返回 ${list.length} 个模型 · 选择后测试是否可用。`);
     } catch (failure) {
       if (!alive.current || controller.signal.aborted) return;
+      if (localConnection && await localPermissionState() === 'denied') { setStage('idle'); setError(''); return; }
       setStage('fallback');
       setError(failure instanceof Error ? failure.message : '暂时无法读取模型列表');
       const provider = Object.hasOwn(REFERENCE_SOURCES, connection.provider) ? connection.provider as ReferenceProvider : 'OpenAI';
@@ -121,6 +130,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
   const testConnection = async (saveAfter = false) => {
     if (testingRef.current) { job.current?.abort(); return; }
     setError(''); setNotice('');
+    if (localConnection && localPermission === 'denied') return;
     let connection: ReturnType<typeof connectionInput>;
     try { connection = connectionInput(); }
     catch (failure) { setError(failure instanceof Error ? failure.message : '请检查连接信息'); return; }
@@ -196,6 +206,13 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
           <div className="api-editor-heading"><h3><span>01</span>{editingId ? '编辑连接' : '添加连接'}</h3>{editingId && <button className="api-endpoint-reset" type="button" onClick={removeConnection}>移除</button>}</div>
           <div className="api-form-field api-name-field"><label htmlFor="apiConnectionName">连接名称 <span className="api-label-optional">选填</span></label><input id="apiConnectionName" value={profileName} maxLength={48} onChange={event => setProfileName(event.target.value)} placeholder="例如：本机服务、日常写作" /></div>
         <div className="api-form-field"><label htmlFor="apiEndpoint">API 地址</label><input id="apiEndpoint" value={endpoint} onChange={event => { clearDirectory(); setEndpoint(event.target.value); setTextModel(''); setImageModel(''); setTextAdapter(/\/responses\/?$/.test(event.target.value.trim()) ? 'openai-responses' : 'openai-chat'); if (isSealedCredential(apiKey)) setApiKey(''); }} placeholder="https://example.com/v1" autoComplete="off" /></div>
+        {localConnection && <div className="api-local-permission" role="status">
+          <strong>{localPermission === 'denied' ? '连接本机服务，需要你允许一次' : localPermission === 'granted' ? '已允许访问本机应用' : '首次连接，需要浏览器授权'}</strong>
+          <p>{localPermission === 'denied'
+            ? '点击地址栏左侧的网站设置，打开“设备上的应用”（部分浏览器叫“本机网络访问”），然后重新获取模型。正式域名和备用入口分别授权。'
+            : localPermission === 'granted' ? '请保持本机 API 服务运行。可以获取模型或测试连接。'
+            : '点击“获取模型”或“测试”后，浏览器可能询问是否允许访问本机应用，请选择允许。网站无法代你开启此权限。'}</p>
+        </div>}
         <div className="api-form-field"><label htmlFor="apiKey">API Key</label><div className="api-key-field"><input id="apiKey" type={keyVisible ? 'text' : 'password'} value={isSealedCredential(apiKey) ? '' : apiKey} onChange={event => { clearDirectory(); setApiKey(event.target.value); }} placeholder={isSealedCredential(apiKey) ? '已保存，无需重填' : '粘贴服务提供的 Key'} autoComplete="off" /><button type="button" disabled={isSealedCredential(apiKey)} onClick={() => setKeyVisible(current => !current)}>{keyVisible ? '隐藏' : '显示'}</button><button className="api-discover" type="button" onClick={discover} disabled={!endpoint.trim() || !apiKey.trim()}>{stage === 'loading' ? '正在识别…' : stage === 'ready' ? '重新获取' : '获取模型'}</button></div></div>
 
         {directoryNote && <p className="api-directory-status" role="status">{directoryNote}</p>}
@@ -213,7 +230,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
         <p className="api-connection-help">文章与封面可分别选择。封面留空即可只使用文字功能。</p>
       </fieldset>
       </div>
-      {(error || notice) && <div className={`api-feedback ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>{error || notice}</div>}
+      {(error || notice) && !(localConnection && localPermission === 'denied' && /浏览器已禁止楷排访问本机 API/.test(error)) && <div className={`api-feedback ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>{error || notice}</div>}
       <footer className="api-settings-actions"><div className="api-save-note"><label className="api-use-after-save"><input type="checkbox" checked={useAfterSave} disabled={busy} onChange={event => setUseAfterSave(event.target.checked)} />保存后使用此连接</label><span>测试会调用模型并使用额度。仅保存不产生调用。</span></div><div className="api-footer-buttons"><button type="button" className="api-test" disabled={saving || stage === 'loading' || (!testing && !textModel.trim() && !imageModel.trim())} onClick={() => void testConnection()}>{testing ? '取消测试' : '测试'}</button><button type="button" disabled={busy || (!textModel.trim() && !imageModel.trim())} onClick={() => void save()}>{saving ? '保存中…' : useAfterSave ? '保存并使用' : '保存'}</button><button type="button" className="api-save" disabled={busy || (!textModel.trim() && !imageModel.trim())} onClick={() => void testConnection(true)}>测试并保存<span aria-hidden="true">↗</span></button></div></footer>
     </section>
   </div>;

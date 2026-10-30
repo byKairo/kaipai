@@ -23,8 +23,10 @@ export default function AssetsPage() {
     try {
       saveAssets(next);
       setAssets(next);
+      return true;
     } catch {
       window.alert('素材库保存失败，可能是浏览器存储空间不足或已被禁用');
+      return false;
     }
   };
 
@@ -36,7 +38,7 @@ export default function AssetsPage() {
     }
     const id = newId();
     const next = [{ id, name: name.trim() || '未命名图片', url: cleanUrl, note: note.trim(), tags, createdAt: Date.now() }, ...assets];
-    persist(next);
+    if (!persist(next)) return;
     setName(''); setUrl(''); setNote(''); setTags([]);
   };
 

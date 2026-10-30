@@ -262,9 +262,15 @@ export async function deleteArticle(id: string) {
     return true;
   } catch {
     if (readFallbackArticle()?.id !== id && !readRecoveryArticles().some(article => article.id === id)) return false;
-    clearRecoveryArticle(id);
-    if (getActiveArticleId() === id) rememberActiveArticle(null);
-    return true;
+    // Do not report success after deleting only a recovery copy: an older
+    // database record would reappear as soon as IndexedDB becomes available.
+    try {
+      const saved = await withStore(STORE_NAME, 'readonly', store => store.get(id));
+      if (saved) return false;
+      clearRecoveryArticle(id);
+      if (getActiveArticleId() === id) rememberActiveArticle(null);
+      return true;
+    } catch { return false; }
   }
 }
 

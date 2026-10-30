@@ -1,5 +1,9 @@
 # 楷排技术架构
 
+## 2026-10-30 编辑器预加载
+
+Workers 构建结束时从当前 client manifest 绑定富文本编辑器的内容哈希路径；缺项、非法路径或编译产物中缺少待绑定标记时拒绝构建。首页 HTML 通过流式 HTMLRewriter 在 head 结束前、已有样式之后追加低优先级 modulepreload，已有相同提示时不重复添加。响应改写发生在公共首页缓存之前，不缓冲整页，也不额外请求配置文件。API、非首页及非 HTML 响应保持原处理；带 nonce 的 CSP 响应不追加提示。Service Worker 仍等待旧页面关闭后更新，不刷新编辑中的文稿。本地 Next.js 预览不使用 Workers 专属提示。
+
 ## 2026-10-30 本机 API 与 GitHub 统一发布
 
 本机回环请求声明 `targetAddressSpace: loopback`。发送凭据前无密钥识别同一回环服务；CLIProxyAPI 使用其支持的 `X-Api-Key`，其余 OpenAI 兼容接口仍用 Bearer。CLIProxyAPI 的 `Access-Control-Allow-Headers: *` 不包含 Authorization 的浏览器授权，所以不能把命令行请求成功当作浏览器跨域成功。禁止把密钥放进 URL，也不对失败的模型 POST 自动改认证头重试。浏览器明确拒绝本机网络权限时给出对应提示。

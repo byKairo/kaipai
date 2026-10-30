@@ -2,6 +2,7 @@ import vinext from 'vinext/server/fetch-handler';
 import { limitApiRequest, type ApiRateLimiter } from './lib/server/rate-limit';
 import { cachedPublicShell, type ShellCache, type ShellContext } from './public-shell-cache';
 import { release, sourceCommit } from './public-shell-release';
+import { preloadEditor } from './editor-preload';
 export * from 'vinext/server/fetch-handler';
 
 function protect(response: Response) {
@@ -19,6 +20,6 @@ export default {
     const blocked = await limitApiRequest(request, env.KAIPAI_API_RATE_LIMITER);
     if (blocked) return protect(blocked);
     const cache = (globalThis.caches as CacheStorage & { default?: ShellCache } | undefined)?.default;
-    return protect(await cachedPublicShell(request, () => vinext.fetch(request, env, context), cache, context, release));
+    return protect(await cachedPublicShell(request, async () => preloadEditor(request, await vinext.fetch(request, env, context)), cache, context, release));
   },
 };

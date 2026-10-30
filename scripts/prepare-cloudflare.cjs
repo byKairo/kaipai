@@ -16,7 +16,7 @@ for (const name of ['app', 'lib', 'server', 'public']) {
   fs.cpSync(path.join(root, name), path.join(target, name), { recursive: true });
 }
 for (const name of ['next.config.mjs', 'next-env.d.ts', 'tsconfig.json']) fs.copyFileSync(path.join(root, name), path.join(target, name));
-for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc', 'worker.ts', 'public-shell-cache.ts']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
+for (const name of ['package.json', 'vite.config.ts', 'wrangler.jsonc', 'worker.ts', 'public-shell-cache.ts', 'editor-preload.ts']) fs.copyFileSync(path.join(root, 'cloudflare', name), path.join(target, name));
 // A fresh preparation may get a different framework BUILD_ID for identical
 // source, so include a per-build nonce as well as the validated source digest.
 fs.writeFileSync(path.join(target, 'public-shell-release.ts'), `export const release = ${JSON.stringify(createReleaseId(preparedSource))};\nexport const sourceCommit = ${JSON.stringify(commit)};\n`);

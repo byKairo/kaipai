@@ -13,6 +13,7 @@ function compile(module, filename) {
 require.extensions['.ts'] = compile;
 require.extensions['.mts'] = compile;
 async function main() {
+require(path.resolve(__dirname, '..', 'tests/editor-preload.test.ts')).run();
 await require(path.resolve(__dirname, '..', 'tests/github-release.test.ts')).run();
 await require(path.resolve(__dirname, '..', 'tests/local-api-access.test.ts')).run();
 await require(path.resolve(__dirname, '..', 'tests/deployment-safety.test.cjs')).run();

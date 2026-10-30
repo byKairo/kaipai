@@ -22,6 +22,7 @@ function sourceDigest() {
     ...['next.config.mjs', 'tsconfig.json', 'package.json', 'package-lock.json'].map(name => path.join(root, name)),
     path.join(root, 'scripts/prepare-cloudflare.cjs'), path.join(root, 'scripts/finalize-cloudflare.cjs'), __filename,
     path.join(root, 'scripts/release-assets.cjs'), path.join(root, 'scripts/verify-github-release.cjs'), path.join(root, 'scripts/publish-github-release.cjs'), path.join(root, 'scripts/deployment-safety.cjs'),
+    path.join(root, 'scripts/editor-preload.cjs'),
   ]).sort());
 }
 function createReleaseId(source) {
@@ -37,6 +38,7 @@ function verify() {
   if (prepared.source !== source) throw new Error('源码在准备部署后已变化，请重新运行 npm run cf:build');
   const artifacts = files(path.join(target, 'dist'), true);
   for (const file of artifacts.filter(file => file.endsWith('.js'))) {
+    if (fs.readFileSync(file, 'utf8').includes('__KAIPAI_EDITOR_PRELOAD_HREF__')) throw new Error('Editor preload marker was not finalized');
     if (/redirect\s*:\s*(['"`])error\1/.test(fs.readFileSync(file, 'utf8'))) {
       throw new Error(`Workers 构建含不支持的 redirect:error：${path.relative(target, file)}`);
     }

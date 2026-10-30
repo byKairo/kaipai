@@ -6,6 +6,8 @@ const { copyRetained, publicAssets, collectPrecache } = require('./release-asset
 const root = path.resolve(__dirname, '..');
 const client = path.join(root, '.cloudflare-deploy/dist/client');
 const manifest = JSON.parse(fs.readFileSync(path.join(client, '.vite/manifest.json'), 'utf8'));
+const editorPreload = require('./editor-preload.cjs').bindEditorPreload(path.join(root, '.cloudflare-deploy/dist/server'), manifest);
+console.log(`Editor preload bound to ${editorPreload.href}; appended after styles in streaming HTML.`);
 // vinext's global styles are emitted separately from Vite's manifest.
 const styles = fs.readdirSync(path.join(client, '_next/static/css')).filter(file => file.endsWith('.css')).map(file => '_next/static/css/' + file);
 const currentAssets = publicAssets(manifest, styles);

@@ -22,4 +22,4 @@ cloudflare/asset-history/ 保存已发布的公开 JS/CSS 与哈希；cf:build �
 
 GitHub Actions 将 GITHUB_SHA 写入准备记录和 Worker 构建。/api/release 使用该固定值，不根据浏览器缓存或本地配置猜测版本。本机 cf:deploy 会明确拒绝；本机 cf:build、cf:preview 不受影响。
 
-2026-10-30 统一前，GitHub 最后一次自动部署在 10-22，后续通过本机隔离生产归档发布。此次以已验证的 5f632cdd 生产归档为基础，保留 GitHub 已有防护与依赖补丁，合并本机 API 和缓存兼容修复。其他根工作区未发布改动未混入。
+旧静态入口、桥接服务和停用的图片转存接口已删除。正式与备用域名共用同一份产品源码，生成目录不可单独修改；历史资源仅为已打开页面提供兼容。

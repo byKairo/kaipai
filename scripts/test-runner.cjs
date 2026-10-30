@@ -24,7 +24,6 @@ require(path.resolve(__dirname, '..', 'tests/model-discovery.test.ts')).run();
 require(path.resolve(__dirname, '..', 'tests/api-setup.test.ts')).run();
 require(path.resolve(__dirname, '..', 'tests/api-connections.test.ts')).run();
 await require(path.resolve(__dirname, '..', 'tests/chat-response.test.ts')).run();
-await require(path.resolve(__dirname, '..', 'tests/article-copy-assets.test.ts')).run();
 for (const filename of ['tests/public-shell-edge-cache.test.ts', 'tests/public-shell.test.ts', 'tests/follow-composer.test.ts', 'tests/upstream-routes.test.ts', 'tests/response-body.test.ts', 'tests/ai-protocol.test.ts', 'tests/ai-cancellation.test.ts', 'tests/generated-images.test.ts', 'tests/generated-image-history.test.ts', 'tests/persisted-settings.test.ts', 'tests/layout-review.test.ts', 'tests/v4-styles.test.ts', 'tests/style-prototypes.test.ts', 'tests/ai-workbench.test.ts', 'tests/article-review.test.ts', 'tests/cover-design.test.ts', 'tests/request-origin.test.ts', 'tests/credential-framework.test.ts', 'scripts/wechat-compliance-smoke.ts', 'scripts/heading-contrast-smoke.mts', 'tests/article-styles.test.ts', 'tests/wechat-publication.test.ts', 'tests/server-endpoint.test.ts', 'tests/wechat-html.test.ts', 'tests/link-security.test.ts', 'tests/storage-import-export.test.ts', 'tests/request-scope.test.ts', 'tests/css-cleanup.test.ts', 'tests/autosave.test.ts']) {
   console.log(`\nRunning ${filename}`);
   const suite = require(path.resolve(__dirname, '..', filename));

@@ -14,16 +14,3 @@ export async function importDocx(file: File) {
     throw new Error(`Word 导入失败：${detail}`);
   }
 }
-
-export async function importPdf(file: File) {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const buffer = await file.arrayBuffer();
-  const document = await pdfjs.getDocument({ data: buffer }).promise;
-  const pages: string[] = [];
-  for (let index = 1; index <= document.numPages; index += 1) {
-    const page = await document.getPage(index);
-    const text = await page.getTextContent();
-    pages.push('<p>' + text.items.map(item => 'str' in item ? item.str : '').join(' ') + '</p>');
-  }
-  return pages.join('');
-}

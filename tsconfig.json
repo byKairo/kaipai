@@ -29,21 +29,10 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next-dev/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "_sync_to_mac",
-    "_sync_to_mac_LIVE",
-    "_sync_to_mac_mobile",
-    "_sync_to_mac_quality",
-    "_sync_to_mac_tech",
-    "_wechat_old.ts",
     "node_modules",
-    "kaipai",
-    "**/_sync_to_mac*/**",
-    "_wechat_old.ts.bak_*",
-    "archive",
     "cloudflare",
     ".cloudflare-deploy"
   ]

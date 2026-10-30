@@ -40,12 +40,5 @@ source = source.replace("import { readFileSync } from 'node:fs';", "import bundl
   .replace("const root = join(process.cwd(), 'server', 'skills');\n", '')
   .replace(original, '(bundledResources as Record<string, string>)[key]');
 fs.writeFileSync(workflow, source);
-// Keep Cloudflare's native bindings out of the ordinary Next build.
-const assetAdapter = fs.readFileSync(path.join(root, 'cloudflare/image-assets-runtime.ts'), 'utf8')
-  .replace("import type { ImageAssetBindings } from '../lib/server/image-assets-runtime';", "import type { ImageAssetBindings } from './image-assets-types';");
-const assetRuntime = path.join(target, 'lib/server/image-assets-runtime.ts');
-const assetTypes = fs.readFileSync(assetRuntime, 'utf8').split('// Workers preparation')[0];
-fs.writeFileSync(path.join(target, 'lib/server/image-assets-types.ts'), assetTypes);
-fs.writeFileSync(assetRuntime, assetAdapter);
 fs.writeFileSync(path.join(target, 'prepared-source.json'), JSON.stringify({ source: preparedSource, commit }));
 console.log('Cloudflare workspace prepared; Skill hashes verified; no local environment files copied.');

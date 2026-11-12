@@ -9,7 +9,7 @@ import { aiFetch, isLocalApi } from '../lib/ai-transport';
 import { protectApiProfile } from '../lib/credential-client';
 import { isSealedCredential } from '../lib/credential-format';
 import { requestAi, type AiProviderId } from '../lib/providers';
-import { connectionRoles, savedConnectionRoles, saveConnection } from '../lib/api-connection-state';
+import { connectionRoles, saveConnection } from '../lib/api-connection-state';
 import { defaultImageAdapter, type ApiProfile, type ApiProfileRoles } from '../lib/api-profiles';
 import { identifyApiAddress } from '../lib/api-setup';
 import { localPermissionState } from '../lib/local-api-access';
@@ -43,7 +43,6 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
   const [referenceProvider, setReferenceProvider] = useState<ReferenceProvider>('OpenAI');
   const [referenceBusy, setReferenceBusy] = useState(false);
   const [referenceNote, setReferenceNote] = useState('');
-  const [useAfterSave, setUseAfterSave] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const job = useRef<AbortController | null>(null);
@@ -62,7 +61,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
     if (preserveDraft) drafts.current.set(editingId, { endpoint, apiKey, textModel, imageModel, profileName, textAdapter });
     const profile = profiles.find(item => item.id === id);
     const draft = drafts.current.get(id);
-    clearDirectory(); setUseAfterSave(false); setEditingId(id); setEndpoint(draft?.endpoint ?? profile?.baseUrl ?? ''); setApiKey(draft?.apiKey ?? profile?.apiKey ?? '');
+    clearDirectory(); setEditingId(id); setEndpoint(draft?.endpoint ?? profile?.baseUrl ?? ''); setApiKey(draft?.apiKey ?? profile?.apiKey ?? '');
     setTextModel(draft?.textModel ?? profile?.models.text ?? ''); setImageModel(draft?.imageModel ?? profile?.models.image ?? ''); setKeyVisible(false);
     setProfileName(draft?.profileName ?? profile?.name ?? '');
     setTextAdapter(draft?.textAdapter ?? profile?.adapters.text ?? 'openai-chat');
@@ -127,7 +126,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
     const imageAdapter = previous?.baseUrl === connection.baseUrl && previous.models.image === imageModel.trim() ? previous.adapters.image : defaultImageAdapter(provider, connection.baseUrl, imageModel.trim());
     return { ...connection, provider, imageAdapter, key: apiKey.trim() };
   };
-  const testConnection = async (saveAfter = false) => {
+  const testConnection = async () => {
     if (testingRef.current) { job.current?.abort(); return; }
     setError(''); setNotice('');
     if (localConnection && localPermission === 'denied') return;
@@ -152,8 +151,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
         passed.push('封面');
       }
       if (alive.current && !controller.signal.aborted) {
-        if (saveAfter) await save(true);
-        else setNotice(`${passed.join('、')}模型测试通过，尚未保存。`);
+        await save(true);
       }
     } catch (failure) {
       if (alive.current) { setNotice(controller.signal.aborted ? '测试已取消。' : ''); if (!controller.signal.aborted) setError(`${passed.length ? passed.join('、') + '已通过；' : ''}${(failure instanceof Error ? failure.message : '测试失败').replace(/[。.,，]+$/, '')}。配置未改动。`); }
@@ -174,9 +172,9 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
       if (imageModel.trim()) modelConfigs.push({ id: `${id}:image`, modelId: imageModel.trim(), displayName: imageModel.trim(), capabilities: ['image-generation'], adapter: imageAdapter, enabled: true });
       const profile = await protectApiProfile({ id, name: profileName.trim() || new URL(connection.baseUrl).host, provider, baseUrl: connection.baseUrl, apiKey: apiKey.trim(), models: { ...previous?.models, text: textModel.trim(), image: imageModel.trim() }, adapters: { text: textAdapter, image: imageAdapter }, modelConfigs, workspaceId: sameConnection ? previous.workspaceId : undefined });
       if (!alive.current) return;
-      onChange(saveConnection(profiles, profile), savedConnectionRoles(roles, profile, useAfterSave));
+      onChange(saveConnection(profiles, profile), connectionRoles(profile));
       drafts.current.delete(editingId); setEditingId(id); setProfileName(profile.name); setApiKey(profile.apiKey); setEndpoint(profile.baseUrl);
-      setNotice(`${tested ? '测试通过。' : ''}「${profile.name}」已保存${useAfterSave ? '并设为当前连接' : '，未切换连接'}。`);
+      setNotice(`${tested ? '测试通过。' : ''}「${profile.name}」已保存并设为当前连接。`);
     } catch (failure) { if (alive.current) setError(failure instanceof Error ? failure.message : '保存失败，请重试'); }
     finally { savingRef.current = false; if (alive.current) setSaving(false); }
   };
@@ -196,7 +194,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
           {!profiles.length && <p className="api-connections-empty">本机、云端，都能接入。<br />每个地址独立保存。</p>}
           <div className="api-connection-list">{profiles.map(profile => {
             const active = roles.textId === profile.id || roles.imageId === profile.id;
-            return <div key={profile.id} className={`api-connection-card ${editingId === profile.id ? 'selected' : ''}`}>
+            return <div key={profile.id} className={`api-connection-card ${active ? 'active' : ''} ${editingId === profile.id ? 'selected' : ''}`}>
               <button type="button" className="api-connection-edit" disabled={busy} onClick={() => loadProfile(profile.id)} aria-pressed={editingId === profile.id}><span className="api-connection-tag">{isLocalApi(profile.baseUrl) ? 'LOCAL' : 'CLOUD'}{active && <b>使用中</b>}</span><strong>{profile.name}</strong><small>{profile.baseUrl}</small></button>
               <button type="button" className="api-connection-activate" disabled={busy || active && roles.textId === (profile.models.text ? profile.id : '') && roles.imageId === (profile.models.image ? profile.id : '')} onClick={() => activate(profile)}>{active ? '正在使用' : '使用已保存配置 ↗'}</button>
             </div>;
@@ -231,7 +229,7 @@ export default function ApiSettings({ profiles, roles, onClose, onChange }: { pr
       </fieldset>
       </div>
       {(error || notice) && !(localConnection && localPermission === 'denied' && /浏览器已禁止楷排访问本机 API/.test(error)) && <div className={`api-feedback ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>{error || notice}</div>}
-      <footer className="api-settings-actions"><div className="api-save-note"><label className="api-use-after-save"><input type="checkbox" checked={useAfterSave} disabled={busy} onChange={event => setUseAfterSave(event.target.checked)} />保存后使用此连接</label><span>测试会调用模型并使用额度。仅保存不产生调用。</span></div><div className="api-footer-buttons"><button type="button" className="api-test" disabled={saving || stage === 'loading' || (!testing && !textModel.trim() && !imageModel.trim())} onClick={() => void testConnection()}>{testing ? '取消测试' : '测试'}</button><button type="button" disabled={busy || (!textModel.trim() && !imageModel.trim())} onClick={() => void save()}>{saving ? '保存中…' : useAfterSave ? '保存并使用' : '保存'}</button><button type="button" className="api-save" disabled={busy || (!textModel.trim() && !imageModel.trim())} onClick={() => void testConnection(true)}>测试并保存<span aria-hidden="true">↗</span></button></div></footer>
+      <footer className="api-settings-actions"><div className="api-save-note"><b>保存后自动使用此连接</b><span>测试会调用模型并使用额度。仅保存不产生调用。</span></div><div className="api-footer-buttons"><button type="button" disabled={busy || (!textModel.trim() && !imageModel.trim())} onClick={() => void save()}>{saving ? '保存中…' : '保存'}</button><button type="button" className="api-save" disabled={saving || stage === 'loading' || (!testing && !textModel.trim() && !imageModel.trim())} onClick={() => void testConnection()}>{testing ? '取消测试' : '测试并保存'}<span aria-hidden="true">↗</span></button></div></footer>
     </section>
   </div>;
 }

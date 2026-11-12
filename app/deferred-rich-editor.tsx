@@ -10,16 +10,20 @@ function loadEditor() {
   return editorModule ??= import('./rich-editor').catch(error => { editorModule = undefined; throw error; });
 }
 
-export default function DeferredRichEditor(props: RichEditorProps) {
+export default function DeferredRichEditor({ onLoadFailure, ...props }: RichEditorProps & { onLoadFailure: () => void }) {
   const [EditorComponent, setEditorComponent] = useState<typeof import('./rich-editor')['default'] | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [loadTiming, setLoadTiming] = useState<string>();
   useEffect(() => {
     let current = true;
-    void loadEditor().then(module => { if (current) setEditorComponent(() => module.default); }, () => { if (current) setFailed(true); });
+    void loadEditor().then(module => { if (current) setEditorComponent(() => module.default); }, () => {
+      if (!current) return;
+      setFailed(true);
+      onLoadFailure();
+    });
     return () => { current = false; };
-  }, []);
+  }, [onLoadFailure]);
   // Local performance evidence only; no telemetry or document data leaves the browser.
   useEffect(() => {
     if (!ready) return;

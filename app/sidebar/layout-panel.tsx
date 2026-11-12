@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { findStyle } from '../../lib/styles';
 import { styleUseCases } from '../../lib/article-styles/visual-rules';
 import { StyleThumb } from './style-thumb';
@@ -9,6 +10,8 @@ export function LayoutPanel({ model }: {
   model: SidebarModel;
 }) {
   const { p, expanded, setExpanded, headingOpen, setHeadingOpen, emojiQuery, setEmojiQuery, brandOpen, setBrandOpen, brandName, setBrandName, brandNote, setBrandNote, activePreset, heading, visible, stylePaper, tinted } = model;
+  const [showInitialThumbnails, setShowInitialThumbnails] = useState(false);
+  useEffect(() => setShowInitialThumbnails(true), []);
   return (
     <div className={"side-body"} id={"tab-layout"} hidden={p.tab !== "layout"}>
       <div className={"sec"}>
@@ -27,7 +30,7 @@ export function LayoutPanel({ model }: {
         <div className={"style-current"} id={"styleCurrent"}>
           <div className={"style-current-feature"}>
             <span className={"style-current-preview"} id={"styleCurrentPreview"} aria-hidden={"true"}>
-              <StyleThumb id={p.styleId} />
+              <StyleThumb id={p.styleId} eager={showInitialThumbnails} />
             </span>
             <div>
               <span>
@@ -186,7 +189,7 @@ export function LayoutPanel({ model }: {
         <div className={"quick-style-list"} id={"quickStyleList"}>
           {STYLE_ORDER.filter(id => expanded || visible.includes(id)).map(id =>
             <button key={id} type="button" className={'quick-style-card' + (id === p.styleId ? ' active' : '')} data-neo-block="style" data-family={STYLE_FAMILY[id]} data-v080-style={id} data-layout={id} aria-pressed={id === p.styleId} onClick={() => p.onStyleChange(id)}>
-              <StyleThumb id={id} />
+              <StyleThumb id={id} eager={showInitialThumbnails && visible.includes(id)} />
               <span>
                 <b>
                   {p.styles.find(x => x.id === id)?.name || STYLE_NAMES[id]}

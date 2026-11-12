@@ -1,0 +1,77 @@
+.preparing { visibility: hidden; }
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 0 clamp(16px, 5vw, 56px);
+  background: #f7f0d3;
+  color: #251b12;
+}
+
+.screen[data-animating] { color: #fff; }
+
+.content {
+  position: relative;
+  width: min(100%, 860px);
+}
+
+.status {
+  position: absolute;
+  top: calc(100% + 14px);
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font: 500 13px/1.5 system-ui, sans-serif;
+}
+
+.content:not(:has([data-visible])) .status {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.track {
+  position: relative;
+  aspect-ratio: 3;
+  overflow: hidden;
+  border: 2px solid #a1b7d0a8;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px #a6bad326, 0 14px 30px -12px #02080f99;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.track[data-visible] { visibility: visible; opacity: 1; }
+
+.track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 #dbeafabb, inset 0 -16px 24px -24px #000;
+}
+
+.track img, .track canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.track canvas { image-rendering: pixelated; }
+.track img { visibility: hidden; }
+.track[data-visible="still"] img { visibility: visible; }
+.track[data-visible="still"] canvas { visibility: hidden; }
+
+@media (max-width: 600px) {
+  .track { aspect-ratio: 2.2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track { transition: none; }
+}

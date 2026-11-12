@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { connectionRoles, savedConnectionRoles, saveConnection } from '../lib/api-connection-state';
+import { connectionRoles, saveConnection } from '../lib/api-connection-state';
 import type { ApiProfile } from '../lib/api-profiles';
 const profile = (id: string, image = true): ApiProfile => ({ id, name: id, provider: 'Custom', baseUrl: `https://${id}.example/v1`, apiKey: `${id}-sealed-credential`, models: { text: `${id}-text`, image: image ? `${id}-image` : '' }, adapters: { text: 'openai-chat', image: 'openai-images' }, modelConfigs: [{ id: `${id}-legacy-text-id`, modelId: `${id}-text`, capabilities: ['text'], displayName: id, adapter: 'openai-chat', enabled: true }, ...(image ? [{ id: `${id}-legacy-image-id`, modelId: `${id}-image`, capabilities: ['image-generation' as const], displayName: id, adapter: 'openai-images' as const, enabled: true }] : [])] });
 export function run() {
@@ -20,10 +20,6 @@ export function run() {
   assert.equal(updated[1].baseUrl, 'https://b.example/v1');
   const textOnly = profile('text-only', false);
   assert.deepEqual(connectionRoles(textOnly), { textId: 'text-only', imageId: '', textModelId: 'text-only-legacy-text-id', imageModelId: undefined });
-  assert.deepEqual(savedConnectionRoles(connectionRoles(a), b, false), connectionRoles(a), 'saving another connection must not activate it');
-  assert.deepEqual(savedConnectionRoles(connectionRoles(a), b, true), connectionRoles(b), 'explicit activation switches both roles');
-  const mixed = { textId: 'a', imageId: 'b', textModelId: 'old-text', imageModelId: 'b-image' };
-  assert.deepEqual(savedConnectionRoles(mixed, a, false), { ...mixed, textModelId: 'a-legacy-text-id' }, 'saving current text connection preserves separate image connection');
-  assert.equal(savedConnectionRoles(connectionRoles(a), { ...a, models: { text: a.models.text, image: '' } }, false).imageId, '', 'removed model clears its active role');
+  assert.equal(connectionRoles({ ...a, models: { text: a.models.text, image: '' } }).imageId, '', 'removed model clears its active role');
   console.log('PASS: independent connection credentials, append/update isolation, saved model switching and text-only activation');
 }

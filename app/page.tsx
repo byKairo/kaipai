@@ -17,6 +17,8 @@ import { isImageTargetCurrent } from '../lib/ai-workbench';
 import { useAiActions } from './workspace/use-ai-actions';
 import { useArticleReview } from './workspace/use-article-review';
 import reviewUi from './workspace/article-review.module.css';
+import openingUi from './workspace/workspace-opening.module.css';
+import { WorkspaceOpening } from './workspace/workspace-opening';
 import type { AiProviderId } from '../lib/providers';
 import { sample } from './workspace/sample-article';
 import { normalizeHeadingStyle, barLabels, barPrefixes, normalizedPresetAppearance } from './workspace/appearance';
@@ -130,6 +132,7 @@ export default function Page() {
   const [articlesReady, setArticlesReady] = useState(false);
   const [activeArticleId, setActiveArticleId] = useState('');
   const initialArticleId = useRef('');
+  const editorKey = !activeArticleId || activeArticleId === initialArticleId.current ? 'initial' : activeArticleId;
   const requestScope = useRequestScope(activeArticleId, content);
   const articleSession = useRef(0);
   const editorRevision = useRef(0);
@@ -141,7 +144,14 @@ export default function Page() {
   const [historyTick, setHistoryTick] = useState(0);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const richEditorRef = useRef<Editor | null>(null);
-  const [editorReady, setEditorReady] = useState(false);
+  const [readyEditorKey, setReadyEditorKey] = useState<string | null>(null);
+  const [failedEditorKey, setFailedEditorKey] = useState<string | null>(null);
+  const editorReady = readyEditorKey === editorKey;
+  const [workspaceOpened, setWorkspaceOpened] = useState(false);
+  const opening = !workspaceOpened;
+  useEffect(() => {
+    if (opening && articlesReady && (editorReady || failedEditorKey === editorKey)) setWorkspaceOpened(true);
+  }, [opening, articlesReady, editorReady, failedEditorKey, editorKey]);
   const editorScrollRef = useRef<HTMLDivElement | null>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollLockRef = useRef(false);
@@ -208,8 +218,9 @@ export default function Page() {
   }, []);
   const receiveEditorReady = useCallback((editor: Editor | null) => {
     richEditorRef.current = editor;
-    setEditorReady(Boolean(editor));
-  }, []);
+    setReadyEditorKey(editor ? editorKey : null);
+  }, [editorKey]);
+  const reportEditorLoadFailure = useCallback(() => setFailedEditorKey(editorKey), [editorKey]);
   const openArticle = (article: ArticleRecord) => {
     flushArticle();
     invalidateArticleRequests();
@@ -824,7 +835,9 @@ export default function Page() {
   };
   // Preview, clipboard and file export use the same renderer and options.
 
-  return <main id="kaipai-studio" className={`v091-app kaipai-studio v091-${ui} v091-mobile-${mobileView}`} data-ui={ui === "tactile" ? "tactile" : "neo2"}>
+  return <>
+    {opening && <WorkspaceOpening />}
+    <main id="kaipai-studio" className={`v091-app kaipai-studio v091-${ui} v091-mobile-${mobileView}${opening ? ` ${openingUi.preparing}` : ''}`} data-ui={ui === "tactile" ? "tactile" : "neo2"} aria-hidden={opening || undefined}>
     <header className="v091-topbar">
       <div className="v091-brand"><b>楷</b><span><strong>楷排 <i>v0.91</i></strong><small>ARTICLE LAYOUT WORKSPACE</small></span></div>
       <button className={`v091-top-chip v091-api-status ${apiProvider !== '本地模拟' && textApiKey ? 'connected' : 'disconnected'}`} onClick={() => setApiOpen(true)}><span className="v091-api-indicator" aria-hidden="true" />AI {apiProvider === '本地模拟' || !textApiKey ? '可选 · 未连接' : '已配置'}</button>
@@ -1046,7 +1059,7 @@ export default function Page() {
           onHorizontalRule={() => { if (richEditorRef.current) { richEditorRef.current.chain().focus().setHorizontalRule().run(); return; } apply('---'); }} /></fieldset>
         {editorAction && <form className="v091-editor-action" onSubmit={(event) => { event.preventDefault(); submitEditorAction(); }}><label>{editorAction === 'link' ? '输入链接地址' : editorAction === 'image' ? '输入图片地址' : '编辑图片说明'}<input autoFocus value={editorActionValue} onChange={(event) => setEditorActionValue(event.target.value)} placeholder={editorAction === 'caption' ? '写一句图片说明' : 'https://...'} /></label><button type="submit">确认</button><button type="button" onClick={() => setEditorAction(null)}>取消</button></form>}
         <input ref={imageInputRef} className="v091-hidden-input" type="file" accept="image/*" onChange={insertImage} />
-        <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={!activeArticleId || activeArticleId === initialArticleId.current ? 'initial' : activeArticleId} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onReviewState={articleReview.setReview} /></div>
+        <div className={`v091-editor-scroll ${reviewUi.editorHost}`} ref={editorScrollRef} onScroll={onEditorScroll} style={{ '--article-accent': accent, '--article-mark-bg': editorHighlight.backgroundColor, '--article-mark-image': editorHighlight.backgroundImage, '--article-mark-ink': editorHighlight.color, '--article-mark-padding': editorHighlight.padding } as React.CSSProperties}><RichEditor key={editorKey} value={content} document={documentJson} htmlToImport={htmlToImport} onChange={receiveEditorChange} onReady={receiveEditorReady} onLoadFailure={reportEditorLoadFailure} onReviewState={articleReview.setReview} /></div>
         {articleReview.active && <ArticleReviewPopover editor={richEditorRef.current} item={articleReview.active} onAdopt={articleReview.adopt} onIgnore={articleReview.dismiss} onClose={() => articleReview.select(null)} />}
         {aiRevision && <AiRevisionDialog label={aiRevision.kind === 'title' ? '标题建议对照' : '润色对照'} onClose={() => { requestScope.cancel('revision'); setAiRevision(null); }}>
           <div className="ai-revision-head"><b>{aiRevision.kind === 'title' ? '标题建议' : '润色批改'}</b><button type="button" onClick={() => { requestScope.cancel('revision'); setAiRevision(null); }} aria-label="关闭批改框">×</button></div>
@@ -1058,11 +1071,12 @@ export default function Page() {
         </AiRevisionDialog>}
         <textarea className="v091-legacy-source" ref={editorRef} aria-label="Markdown 源文稿" value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey ? 1 : -1); } }} tabIndex={-1} />
       </section>
-      <ArticlePreview key={!activeArticleId || activeArticleId === initialArticleId.current ? 'initial' : activeArticleId} styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
+      <ArticlePreview key={editorKey} opening={opening} mobilePreviewSelected={mobileView === 'preview'} styleId={styleDef.id} headingStyle={headingStyle} variant={variant} paperMode={paperMode}
         background={paperMode === 'follow' ? undefined : paperMode === 'custom' ? paperColor : styleDef.paper || '#ffffff'}
         proposal={tab === 'ai' ? proposalPreview : undefined}
         markdown={content} accent={accent} marker={markerColor} sidePadding={padX} eyebrow={pixelLabel} reading={wechatReading} scrollRef={previewScrollRef} onScroll={onPreviewScroll} />
     </section>
     <footer><span>{wordCount} 字</span><span>约 {readMinutes} 分钟</span><span>{codeCount} 个代码块</span><span>{imageCount} 张图</span><span>文章保存在本机</span><PlatformStatus /><OfflineStatus editorReady={editorReady} /></footer>{apiOpen && <ApiSettings profiles={apiProfiles} roles={apiRoles} onClose={() => setApiOpen(false)} onChange={(profiles, roles) => { applyApiProfiles(profiles, roles); say('API 配置已更新'); }} />}{helpOpen && <div className="v091-modal-backdrop" role="dialog" aria-modal="true" aria-label="使用说明"><section className="v091-local-api-modal v091-help-modal"><button className="v091-modal-close" onClick={() => setHelpOpen(false)} aria-label="关闭">×</button><small>KAIPAI / QUICK START</small><h2>使用说明</h2><ol><li>导入或直接粘贴 Markdown 正文。</li><li>从 12 套 Style 中选择整篇文章的设计语言。</li><li>在组件面板插入导语、重点、提醒、分割、推荐或关注模块。</li><li>在右侧预览检查图片、表格、代码和阅读密度。</li><li>点击“复制公众号”可直接复制排版；本地图片请使用楷排插件上传到微信，再复制完整图文。</li></ol><button className="v091-btn primary" onClick={() => setHelpOpen(false)}>开始编辑</button></section></div>}{notice && <div className="v091-toast">{notice}</div>}
-  </main>;
+    </main>
+  </>;
 }

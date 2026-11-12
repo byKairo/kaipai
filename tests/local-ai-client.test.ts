@@ -47,6 +47,9 @@ export async function run() {
     await assert.rejects(localAiFetch('/api/ai', { ...body, adapter: 'openai-responses', action: 'test' }), /回复中断或被截断/);
     globalThis.fetch = async () => new Response('', { status: 401 });
     await assert.rejects(localAiFetch('/api/ai', { ...body, action: 'test' }), /Key 无效/);
+    globalThis.fetch = async () => Response.json({ error: { code: 'model_not_found', message: 'private upstream detail' } }, { status: 400 });
+    await assert.rejects(localAiFetch('/api/ai', { ...body, action: 'test' }), (error: Error) =>
+      error.message.includes('重新获取模型') && !error.message.includes('private upstream detail'));
     globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
     await assert.rejects(localAiFetch('/api/ai', { ...body, action: 'test' }), /跨域访问/);
     await assert.rejects(localAiFetch('/api/ai', { ...body, baseUrl: 'https://example.com/v1' }), /仅用于本机/);

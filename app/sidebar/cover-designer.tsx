@@ -119,6 +119,7 @@ export function CoverDesigner({ context, active = true }: { context: CoverContex
 
   async function generate() {
     const job = begin(); setResults([]);
+    let step = '检查设置';
     try {
       const connection = ensureText();
       if (!imageProfile || !imageModel) { configure(); throw new Error('请配置配图模型'); }
@@ -129,9 +130,11 @@ export function CoverDesigner({ context, active = true }: { context: CoverContex
         let last: Candidate | undefined;
         for (let attempt = 1; attempt <= budget; attempt++) {
           const styleName = styles.find(style => style.id === styleId)!.name;
+          step = '构思画面';
           setPhase(`正在${attempt === 1 ? '构思' : '调整构思'} · ${styleName} · ${attempt}/${budget}`);
           const composed = await ask('design-compose', design, connection, job);
           const prompt = parseCoverPrompt(composed.text);
+          step = '生成图片';
           setPhase(`正在生成 · ${styleName} · ${attempt}/${budget}`);
           const response = await aiFetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: job.signal, cache: 'no-store', body: JSON.stringify({ provider: imageProfile.provider, baseUrl: imageProfile.baseUrl, apiKey: imageProfile.apiKey, model: imageModel.modelId, adapter: imageModel.adapter, aspectRatio: design.aspectRatio, design, prompt }) });
           const data = await response.json();
@@ -149,6 +152,7 @@ export function CoverDesigner({ context, active = true }: { context: CoverContex
             continue;
           }
           update(candidate);
+          step = '看图审核';
           const review = await inspect(candidate, reviewer, job);
           candidate.review = review; update({ ...candidate });
           if (review.status === 'passed') {
@@ -161,7 +165,7 @@ export function CoverDesigner({ context, active = true }: { context: CoverContex
           design = { ...design, previousPrompt: prompt, feedback: [review.feedback, review.evidence, ...Object.values(review.checks).filter(check => check.status !== 'pass' && check.status !== 'not_applicable').map(check => check.evidence)].filter(Boolean).join('\n') };
         }
       }
-    } catch (failure) { if (!job.signal.aborted) setError(failure instanceof Error ? failure.message : '封面生成未完成'); }
+    } catch (failure) { if (!job.signal.aborted) setError(`${step}未完成：${failure instanceof Error ? failure.message : '请重试'}`); }
     finally { if (controller.current === job) setPhase(''); }
   }
   async function retryReview(candidate: Candidate) {
@@ -199,7 +203,7 @@ export function CoverDesigner({ context, active = true }: { context: CoverContex
       </details>
       {busy ? <div className={ui.progress} role="status"><span className={ui.spinner} aria-hidden="true" /><div><b>{phase}</b></div><button className={ui.smallButton} onClick={() => { controller.current?.abort(); setPhase(''); setError('已停止，尚未审核通过的图片保留为候选。'); }}>停止</button></div> : <><button className={ui.primary} disabled={!selected.length || !styles.length} onClick={generate}>{selected.length ? `生成 ${selected.length} 张并审核` : '选择风格后生成'}</button><small className={ui.note}>每种风格最多 {budget} 次生成；通过后保存完整原图。</small></>}
     </>}
-    {error && <p className={ui.imageError} role="alert">{error}</p>}
+    {error && <div className={ui.imageError} role="alert">{error}{error.includes('模型') && <button className={ui.smallButton} onClick={configure}>打开 AI 设置</button>}</div>}
     {!!results.length && <div className={ui.imageList}>{results.map(candidate => <article key={candidate.id} className={ui.imageCard} aria-label={`${candidate.styleName}封面结果`}>
       <div className={ui.sectionHead}><b>{candidate.styleName}</b><span>{candidate.review?.status === 'passed' ? '模型看图审核通过' : candidate.review?.status === 'failed' ? '未通过 · 待调整' : '待审核通过'}</span></div>
       <button className={ui.imagePreview} aria-label={`放大${candidate.styleName}封面`} onClick={() => setPreview(candidate)}><img className={ui.coverResult} src={candidate.src} alt={`${candidate.styleName}封面${candidate.review?.status === 'passed' ? '' : '候选，尚未通过'}`} /></button>

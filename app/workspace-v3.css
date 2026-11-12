@@ -21,10 +21,10 @@
   box-shadow: none !important;
 }
 #kaipai-studio .v091-workspace {
-  grid-template-columns: minmax(266px, 26fr) minmax(360px, 40fr) minmax(320px, 34fr) !important;
+  grid-template-columns: minmax(266px, 24fr) minmax(360px, 41fr) minmax(320px, 35fr) !important;
   gap: 14px !important;
   padding: 18px 19px 20px !important;
-  background: #fff !important;
+  background: #f7f5ef !important;
 }
 #kaipai-studio .v091-pane,
 #kaipai-studio .v091-sidebar-host #sidebar.sidebar {
@@ -40,13 +40,6 @@
 #kaipai-studio .big-side-title { margin: 5px 0 4px !important; font-size: 19px !important; }
 #kaipai-studio .side-desc { margin: 0 0 12px !important; font-size: 11px !important; line-height: 1.55 !important; }
 #kaipai-studio #tab-layout > .sec:first-child { display: flex; flex-direction: column; }
-#kaipai-studio #tab-layout > .sec:first-child > .quick-style-head { order: 1; }
-#kaipai-studio #tab-layout > .sec:first-child > #quickStyleList { order: 2; }
-#kaipai-studio #tab-layout > .sec:first-child > #toggleAllStyles { order: 3; }
-#kaipai-studio #tab-layout > .sec:first-child > #brandCompact { order: 4; }
-#kaipai-studio #tab-layout > .sec:first-child > #brandStyleEditor { order: 5; }
-#kaipai-studio #tab-layout > .sec:first-child > #brandPresetList { order: 6; }
-#kaipai-studio #tab-layout > .sec:first-child > #styleLayoutSource { order: 7; }
 
 /* Current style is a featured article specimen, not another control row. */
 #kaipai-studio #styleCurrent.style-current {
@@ -298,8 +291,7 @@
 #kaipai-studio .v091-tool { width: 29px !important; height: 28px !important; }
 #kaipai-studio .v091-preview-bg {
   padding: 18px 18px 36px !important;
-  background: linear-gradient(#dedede 1px, transparent 1px) 0 0 / 20px 20px,
-    linear-gradient(90deg, #dedede 1px, transparent 1px) 0 0 / 20px 20px, #f7f7f7 !important;
+  background: #eeebe3 !important;
 }
 #kaipai-studio .v091-wechat-phone {
   border: 2px solid #1b1b1b !important;
@@ -330,10 +322,27 @@
   padding: 12px 10px !important;
   border: 0 !important;
   border-radius: 0 !important;
-  background: #ffdf59 !important;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 9px;
+  align-items: center;
+  gap: 8px;
+  background: #fff9e7 !important;
   color: #1b1b1b !important;
 }
-#kaipai-studio .advanced-settings[open] > summary { border-bottom: 2px solid #1b1b1b !important; }
+#kaipai-studio .advanced-settings > summary span { text-align: right; }
+#kaipai-studio .advanced-settings > summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+#kaipai-studio .advanced-settings[open] > summary {
+  border-bottom: 2px solid #1b1b1b !important;
+  background: #ffdf59 !important;
+}
+#kaipai-studio .advanced-settings[open] > summary::after { transform: rotate(225deg); }
 #kaipai-studio .advanced-settings .advanced-body { padding: 12px !important; }
 
 /* AI connection manager: ink, cyan and pink with deliberately offset layers. */

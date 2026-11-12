@@ -26,7 +26,16 @@ async function upstream(url: string, init: RequestInit, key?: string, authHeader
     if (init.signal?.aborted) throw error;
     throw await localConnectionFailure();
   }
-  if (!response.ok) throw new Error(response.status === 401 ? '本地 API 的 Key 无效（401），请核对后重试' : `本地 API 返回 ${response.status}，请检查模型权限与接口支持`);
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('本地 API 的 Key 无效（401），请核对后重试');
+    if (key && (response.status === 400 || response.status === 404)) {
+      const payload = await readResponseJson(response, 8192).catch(() => null);
+      if (payload?.error?.code === 'model_not_found') {
+        throw new Error('本机 API 找不到当前模型。请打开 AI 设置，重新获取模型并选择可用模型。');
+      }
+    }
+    throw new Error(`本地 API 返回 ${response.status}，请检查模型权限与接口支持`);
+  }
   return response;
 }
 async function stableImage(src: string, signal: AbortSignal) {

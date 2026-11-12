@@ -1,7 +1,6 @@
 const inkBlue = [16, 25, 43];
 const slateBlue = [112, 122, 149];
 const paper = [247, 240, 211];
-const sweepMs = 2800;
 const frameIntervalMs = 1000 / 30;
 
 function layer(width: number, height: number) {
@@ -78,7 +77,7 @@ function backdrop(progress: number) {
   return `rgb(${from.map((color, i) => Math.round(color + (to[i] - color) * amount)).join(', ')})`;
 }
 
-export function playOpening(screen: HTMLElement, track: HTMLElement, canvas: HTMLCanvasElement, artwork: HTMLImageElement) {
+export function playOpening(screen: HTMLElement, track: HTMLElement, canvas: HTMLCanvasElement, artwork: HTMLImageElement, durationMs: number, onComplete: () => void) {
   const context = canvas.getContext('2d', { alpha: false });
   if (!context) return;
 
@@ -141,12 +140,13 @@ export function playOpening(screen: HTMLElement, track: HTMLElement, canvas: HTM
   let lastPaint = start;
   let frame = 0;
   function tick(now: number) {
-    const elapsed = Math.min(1, (now - start) / sweepMs);
+    const elapsed = Math.min(1, (now - start) / durationMs);
     if (now - lastPaint >= frameIntervalMs || elapsed === 1) {
       paint(1 - (1 - elapsed) ** 1.4);
       lastPaint = now;
     }
     if (elapsed < 1) frame = requestAnimationFrame(tick);
+    else onComplete();
   }
   frame = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(frame);

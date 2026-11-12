@@ -148,10 +148,12 @@ export default function Page() {
   const [failedEditorKey, setFailedEditorKey] = useState<string | null>(null);
   const editorReady = readyEditorKey === editorKey;
   const [workspaceOpened, setWorkspaceOpened] = useState(false);
+  const [openingComplete, setOpeningComplete] = useState(false);
+  const finishOpening = useCallback(() => setOpeningComplete(true), []);
   const opening = !workspaceOpened;
   useEffect(() => {
-    if (opening && articlesReady && (editorReady || failedEditorKey === editorKey)) setWorkspaceOpened(true);
-  }, [opening, articlesReady, editorReady, failedEditorKey, editorKey]);
+    if (opening && openingComplete && articlesReady && (editorReady || failedEditorKey === editorKey)) setWorkspaceOpened(true);
+  }, [opening, openingComplete, articlesReady, editorReady, failedEditorKey, editorKey]);
   const editorScrollRef = useRef<HTMLDivElement | null>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollLockRef = useRef(false);
@@ -836,7 +838,7 @@ export default function Page() {
   // Preview, clipboard and file export use the same renderer and options.
 
   return <>
-    {opening && <WorkspaceOpening />}
+    {opening && <WorkspaceOpening onComplete={finishOpening} />}
     <main id="kaipai-studio" className={`v091-app kaipai-studio v091-${ui} v091-mobile-${mobileView}${opening ? ` ${openingUi.preparing}` : ''}`} data-ui={ui === "tactile" ? "tactile" : "neo2"} aria-hidden={opening || undefined}>
     <header className="v091-topbar">
       <div className="v091-brand"><b>楷</b><span><strong>楷排 <i>v0.91</i></strong><small>ARTICLE LAYOUT WORKSPACE</small></span></div>

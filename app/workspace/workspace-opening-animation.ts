@@ -141,13 +141,20 @@ export function playOpening(screen: HTMLElement, track: HTMLElement, canvas: HTM
   let frame = 0;
   function tick(now: number) {
     const elapsed = Math.min(1, (now - start) / durationMs);
-    if (now - lastPaint >= frameIntervalMs || elapsed === 1) {
+    if (now - lastPaint >= frameIntervalMs && elapsed < 1) {
       paint(1 - (1 - elapsed) ** 1.4);
       lastPaint = now;
     }
     if (elapsed < 1) frame = requestAnimationFrame(tick);
-    else onComplete();
   }
   frame = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(frame);
+  const end = window.setTimeout(() => {
+    cancelAnimationFrame(frame);
+    paint(1);
+    onComplete();
+  }, durationMs);
+  return () => {
+    cancelAnimationFrame(frame);
+    window.clearTimeout(end);
+  };
 }

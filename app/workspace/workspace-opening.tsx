@@ -6,6 +6,7 @@ import { playOpening } from './workspace-opening-animation';
 
 const artworkUrl = '/article-assets/kairo-design-opening.webp';
 const openingLimitMs = 1950;
+const navigationTargetMs = 2380;
 const sweepMs = 1700;
 const lastFrameMs = 100;
 
@@ -27,13 +28,17 @@ export function WorkspaceOpening({ onComplete }: { onComplete?: () => void }) {
     let stop: (() => void) | undefined;
     let holdTimer: number | undefined;
     const start = performance.now();
+    // Reserve time for the first page's network and hydration work.
+    const budget = start < navigationTargetMs
+      ? Math.min(openingLimitMs, Math.max(450, navigationTargetMs - start))
+      : openingLimitMs;
     const finish = () => {
       if (disposed || finished) return;
       finished = true;
       stop?.();
       onComplete?.();
     };
-    const deadline = window.setTimeout(finish, openingLimitMs);
+    const deadline = window.setTimeout(finish, budget);
     const showStill = () => {
       if (disposed || finished) return;
       if (image.naturalWidth) track.dataset.visible = 'still';
@@ -41,7 +46,7 @@ export function WorkspaceOpening({ onComplete }: { onComplete?: () => void }) {
     };
     void image.decode().then(() => {
       if (disposed || finished) return;
-      const remaining = openingLimitMs - (performance.now() - start) - lastFrameMs;
+      const remaining = budget - (performance.now() - start) - lastFrameMs - 50;
       if (remaining < 250 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         showStill();
         return;
